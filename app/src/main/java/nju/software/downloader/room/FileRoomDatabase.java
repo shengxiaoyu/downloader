@@ -13,9 +13,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase;
 import androidx.sqlite.db.SupportSQLiteOpenHelper;
 
 import nju.software.downloader.dao.WordDao;
-import nju.software.downloader.entities.Word;
+import nju.software.downloader.entities.FileInfo;
 
-@Database(entities = {Word.class},version = 1,exportSchema = false)
+@Database(entities = {FileInfo.class},version = 1,exportSchema = false)
 public abstract class WordRoomDatabase extends RoomDatabase {
 
     public abstract WordDao wordDao() ;
@@ -76,8 +76,8 @@ public abstract class WordRoomDatabase extends RoomDatabase {
             mDao.deleteAll();
 
             for (int i = 0; i <= words.length - 1; i++) {
-                Word word = new Word(words[i]);
-                mDao.insert(word);
+                FileInfo fileInfo = new FileInfo(words[i]);
+                mDao.insert(fileInfo);
             }
             return null;
         }

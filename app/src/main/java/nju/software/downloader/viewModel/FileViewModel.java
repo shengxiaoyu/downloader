@@ -8,12 +8,12 @@ import androidx.lifecycle.LiveData;
 
 import java.util.List;
 
-import nju.software.downloader.entities.Word;
+import nju.software.downloader.entities.FileInfo;
 import nju.software.downloader.repository.WordRepository;
 
 public class WordViewModel extends AndroidViewModel {
     private WordRepository repository ;
-    private LiveData<List<Word>> words ;
+    private LiveData<List<FileInfo>> words ;
 
     public WordViewModel(@NonNull Application application) {
         super(application);
@@ -21,11 +21,11 @@ public class WordViewModel extends AndroidViewModel {
         words = repository.getAllWords() ;
     }
 
-    public LiveData<List<Word>> getAllWords(){
+    public LiveData<List<FileInfo>> getAllWords(){
         return words ;
     }
 
-    public void insert(Word word){
-        repository.insert(word);
+    public void insert(FileInfo fileInfo){
+        repository.insert(fileInfo);
     }
 }

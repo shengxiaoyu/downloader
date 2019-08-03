@@ -9,19 +9,19 @@ import androidx.room.Query;
 
 import java.util.List;
 
-import nju.software.downloader.entities.Word;
+import nju.software.downloader.entities.FileInfo;
 
 @Dao
 public interface WordDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    void insert(Word word);
+    void insert(FileInfo fileInfo);
 
     @Delete
-    void delete(Word word) ;
+    void delete(FileInfo fileInfo) ;
 
-    @Query("DELETE FROM word_table")
+    @Query("DELETE FROM FileInfo")
     void deleteAll() ;
 
-    @Query("SELECT * FROM word_table ORDER BY word ASC")
-    LiveData<List<Word>> getAllWords() ;
+    @Query("SELECT * FROM FileInfo ORDER BY word ASC")
+    LiveData<List<FileInfo>> getAllWords() ;
 }

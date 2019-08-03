@@ -12,11 +12,11 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.List;
 
 import nju.software.downloader.R;
-import nju.software.downloader.entities.Word;
+import nju.software.downloader.entities.FileInfo;
 
 public class WordListAdapter extends RecyclerView.Adapter {
     private final LayoutInflater mInflater;
-    private List<Word> mWords; // Cached copy of words
+    private List<FileInfo> mFileInfos; // Cached copy of words
 
     public WordListAdapter(Context context) { mInflater = LayoutInflater.from(context); }
 
@@ -29,27 +29,27 @@ public class WordListAdapter extends RecyclerView.Adapter {
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
         holder = (WordViewHolder)holder ;
-        if (mWords != null) {
-            Word current = mWords.get(position);
+        if (mFileInfos != null) {
+            FileInfo current = mFileInfos.get(position);
             ((WordViewHolder) holder).wordItemView.setText(current.getWord());
         } else {
             // Covers the case of data not being ready yet.
-            ((WordViewHolder) holder).wordItemView.setText("No Word");
+            ((WordViewHolder) holder).wordItemView.setText("No FileInfo");
         }
     }
 
 
-    public void setWords(List<Word> words){
-        mWords = words;
+    public void setWords(List<FileInfo> fileInfos){
+        mFileInfos = fileInfos;
         notifyDataSetChanged();
     }
 
     // getItemCount() is called many times, and when it is first called,
-    // mWords has not been updated (means initially, it's null, and we can't return null).
+    // mFileInfos has not been updated (means initially, it's null, and we can't return null).
     @Override
     public int getItemCount() {
-        if (mWords != null)
-            return mWords.size();
+        if (mFileInfos != null)
+            return mFileInfos.size();
         else return 0;
     }
 
