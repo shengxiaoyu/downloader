@@ -1,4 +1,4 @@
-package nju.software.downloader;
+package nju.software.downloader.page.taskList;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -23,29 +23,28 @@ import android.widget.Toast;
 
 import java.util.List;
 
-import nju.software.downloader.ViewModel.FileListAdapter;
-import nju.software.downloader.ViewModel.FileViewModel;
-import nju.software.downloader.entities.FileInfo;
+import nju.software.downloader.R;
+import nju.software.downloader.page.addTask.AddTaskActivity;
+import nju.software.downloader.model.TaskInfo;
 
-import static nju.software.downloader.Constant.NEW_DOWNLADER_TASK_ACTIVITY_REQUEST_CODE;
+import static nju.software.downloader.util.Constant.NEW_DOWNLADER_TASK_ACTIVITY_REQUEST_CODE;
 
 public class MainActivity extends AppCompatActivity {
 
     //activity只和viewmodel交互
-    private FileViewModel mFileViewModel;
+    private TaskViewModel mTaskViewModel;
     private static String LOG_TAG = MainActivity.class.getSimpleName() ;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        
         setContentView(R.layout.activity_main);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
         //添加展示列表
         RecyclerView recyclerView = findViewById(R.id.recyclerview);
-        final FileListAdapter adapter = new FileListAdapter(this);
+        final TaskListAdapter adapter = new TaskListAdapter(this);
         recyclerView.setAdapter(adapter);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
@@ -59,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
                         return makeMovementFlags(dragFlags, swipeFlags);
                     }
 
+
                     @Override
                     public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
                         return false;
@@ -67,11 +67,11 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
                         int layoutPosition = viewHolder.getLayoutPosition();
-                        FileInfo taskAtPosition = adapter.getTaskAtPosition(layoutPosition);
+                        TaskInfo taskAtPosition = adapter.getTaskAtPosition(layoutPosition);
                         Toast.makeText(MainActivity.this, "Deleting " +
                                 taskAtPosition.getUrl(), Toast.LENGTH_LONG).show();
                         Log.d(LOG_TAG,"左右滑动删除!") ;
-                        mFileViewModel.delete(taskAtPosition);
+                        mTaskViewModel.delete(taskAtPosition);
 
                     }
                     @Override
@@ -93,21 +93,19 @@ public class MainActivity extends AppCompatActivity {
         });
 
         //将fileviewModel和ui controller绑定，但是activity destory时，viewmodel并不会销毁，重新创建时则会重新返回存在的activity
-        mFileViewModel = ViewModelProviders.of(this).get(FileViewModel.class);
+        mTaskViewModel = ViewModelProviders.of(this).get(TaskViewModel.class);
 
 
         //添加对fileList的观察，
-        mFileViewModel.getAllFiles().observe(this, new Observer<List<FileInfo>>() {
+        mTaskViewModel.getAllFiles().observe(this, new Observer<List<TaskInfo>>() {
 
             //当被观察数据更新时，调用这个方法
             @Override
-            public void onChanged(@Nullable final List<FileInfo> fileInfos) {
-                // Update the cached copy of the fileInfos in the adapter.
-                adapter.setFiles(fileInfos);
+            public void onChanged(@Nullable final List<TaskInfo> taskInfos) {
+                // Update the cached copy of the taskInfos in the adapter.
+                adapter.setFiles(taskInfos);
             }
         });
-
-
 
 
     }
@@ -133,7 +131,7 @@ public class MainActivity extends AppCompatActivity {
                     Toast.LENGTH_SHORT).show();
 
             // Delete the existing data
-            mFileViewModel.deleteALl();
+            mTaskViewModel.deleteALl();
             return true;
         }
 
@@ -145,8 +143,8 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (requestCode == NEW_DOWNLADER_TASK_ACTIVITY_REQUEST_CODE && resultCode == RESULT_OK) {
-            FileInfo fileInfo = new FileInfo(data.getStringExtra(AddTaskActivity.EXTRA_REPLY));
-            mFileViewModel.insert(fileInfo);
+            TaskInfo taskInfo = new TaskInfo(data.getStringExtra(AddTaskActivity.EXTRA_REPLY));
+            mTaskViewModel.insert(taskInfo);
         } else {
             Toast.makeText(
                     getApplicationContext(),

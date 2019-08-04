@@ -1,4 +1,4 @@
-package nju.software.downloader;
+package nju.software.downloader.page.addTask;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -9,6 +9,8 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+
+import nju.software.downloader.R;
 
 public class AddTaskActivity extends AppCompatActivity {
     public static final String EXTRA_REPLY =
