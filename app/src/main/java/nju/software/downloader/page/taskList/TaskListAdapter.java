@@ -54,6 +54,15 @@ public class TaskListAdapter extends RecyclerView.Adapter {
                     drawable = ContextCompat.getDrawable(context, R.drawable.pause_progress_bar);
                 }
                 ((TaskHolder) holder).progressBar.setProgressDrawable(drawable) ;
+            }else {
+                final Drawable drawable;
+                int sdk = android.os.Build.VERSION.SDK_INT;
+                if(sdk < 16) {
+                    drawable =  context.getResources().getDrawable(R.drawable.running_progress_bar);
+                } else {
+                    drawable = ContextCompat.getDrawable(context, R.drawable.running_progress_bar);
+                }
+                ((TaskHolder) holder).progressBar.setProgressDrawable(drawable) ;
             }
         } else {
             // Covers the case of data not being ready yet.
@@ -98,7 +107,9 @@ public class TaskListAdapter extends RecyclerView.Adapter {
             /**
              * 暂停或继续
              */
-            taskViewModel.pasueOrBegin(taskInfo);
+            if(!taskInfo.isFinished()) {
+                taskViewModel.pasueOrBegin(taskInfo);
+            }
         }
     }
 

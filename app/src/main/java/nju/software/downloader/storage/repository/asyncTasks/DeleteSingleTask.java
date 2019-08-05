@@ -9,7 +9,7 @@ import nju.software.downloader.model.TaskListLiveData;
 import nju.software.downloader.storage.dao.TaskDao;
 import nju.software.downloader.util.FileUtil;
 
-public class deleteSingleTask extends AsyncTask<TaskInfo,Void,Void> {
+public class DeleteSingleTask extends AsyncTask<TaskInfo,Void,Void> {
     private TaskListLiveData taskListLiveData ;
     private TaskDao taskDao;
     private File saveDir ;
@@ -24,7 +24,7 @@ public class deleteSingleTask extends AsyncTask<TaskInfo,Void,Void> {
         }
         return null;
     }
-    public deleteSingleTask(TaskListLiveData taskListLiveData,TaskDao taskDao, File saveDir){
+    public DeleteSingleTask(TaskListLiveData taskListLiveData, TaskDao taskDao, File saveDir){
         this.taskDao = taskDao;
         this.saveDir = saveDir ;
         this.taskListLiveData = taskListLiveData ;

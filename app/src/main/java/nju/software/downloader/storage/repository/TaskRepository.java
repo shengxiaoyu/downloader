@@ -6,7 +6,6 @@ import android.os.Environment;
 import android.util.Log;
 
 import androidx.lifecycle.LiveData;
-import androidx.lifecycle.MutableLiveData;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,15 +20,14 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ThreadPoolExecutor;
 
 import nju.software.downloader.model.TaskInfo;
 import nju.software.downloader.model.TaskListLiveData;
 import nju.software.downloader.storage.dao.TaskDao;
 import nju.software.downloader.storage.repository.asyncTasks.DownloadTask;
 import nju.software.downloader.storage.repository.asyncTasks.GetAllAsync;
-import nju.software.downloader.storage.repository.asyncTasks.deleteAllTask;
-import nju.software.downloader.storage.repository.asyncTasks.deleteSingleTask;
+import nju.software.downloader.storage.repository.asyncTasks.DeleteAllTask;
+import nju.software.downloader.storage.repository.asyncTasks.DeleteSingleTask;
 import nju.software.downloader.storage.room.TaskRoomDatabase;
 import nju.software.downloader.util.Constant;
 import nju.software.downloader.util.FileUtil;
@@ -71,7 +69,7 @@ public class TaskRepository {
 
     //删除所有
     public void deleteAll() {
-        new deleteAllTask(taskDao).execute();
+        new DeleteAllTask(taskDao).execute();
     }
 
     //删除单个
@@ -81,11 +79,11 @@ public class TaskRepository {
         Future taskThraed = task.getTaskThraed();
         if (taskThraed != null && !taskThraed.isDone()) {
             taskThraed.cancel(true);
-            new deleteSingleTask(taskList, taskDao, saveDir).execute(task);
+            new DeleteSingleTask(taskList, taskDao, saveDir).execute(task);
         } else {
             //如果已经完成，只需要直接删除
             //启用额外线程删除数据库数据
-            new deleteSingleTask(taskList, taskDao, saveDir).execute(task);
+            new DeleteSingleTask(taskList, taskDao, saveDir).execute(task);
         }
     }
 
@@ -97,17 +95,21 @@ public class TaskRepository {
         if (task.isPaused()) {
             //原先是暂停状态
             /**
-             * 进入等待下载状态 起一个后台任务
+             * 重新进入下载队列
              */
+            Future future = threadPoolExecutor.submit(new DownloadTask(taskDao, saveDir, taskList, task));
+            task.setTaskThraed(future);
+            task.setPaused(false);
         } else {
             //原先是下载状态
             Future taskThraed = task.getTaskThraed();
-            //判断是否已经下载完成，如果为完成，则取消线程
+
+            //判断是否已经下载完成，如果未完成，则取消线程
             if (taskThraed != null && !taskThraed.isDone()) {
                 taskThraed.cancel(true);
+                task.setPaused(true);
+                taskList.updateValue(task);
             }
-            task.setPaused(true);
-            taskList.updateValue(task);
         }
 
     }
@@ -122,6 +124,7 @@ public class TaskRepository {
 
             TaskInfo taskInfo = taskInfos[0];
 
+            boolean canConnection = true ;
 
             //获取文件名，确定文件存储路径
             try {
@@ -134,31 +137,30 @@ public class TaskRepository {
                 if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
                     Log.d(LOG_TAG, "Server returned HTTP " + connection.getResponseCode()
                             + " " + connection.getResponseMessage());
+                    canConnection = false ;
+                }else {
+                    //获取文件名
+                    String fileName = connection.getHeaderField("Content-Disposition");
+                    if (fileName == null || fileName.length() < 1) {
+                        // 通过截取URL来获取文件名
+                        URL downloadUrl = connection.getURL();
+                        // 获得实际下载文件的URL
+                        fileName = downloadUrl.getFile();
+                        fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
+                    } else {
+                        fileName = URLDecoder.decode(fileName.substring(fileName.indexOf("filename=") + 9), "UTF-8");
+                        // 存在文件名会被包含在""里面，所以要去掉，否则读取异常
+                        fileName = fileName.replaceAll("\"", "");
+                    }
+                    File saveFile = new File(saveDir, fileName);
+                    //如果文件名重复
+                    int index = 1;
+                    while (saveFile.exists()) {
+                        saveFile = new File(saveDir, FileUtil.increaseFileName(fileName, index));
+                        index++;
+                    }
+                    taskInfo.setFileName(saveFile.getName());
                 }
-                Log.d(LOG_TAG, "网络连接成功");
-
-                //获取文件名
-                String fileName = connection.getHeaderField("Content-Disposition");
-                if (fileName == null || fileName.length() < 1) {
-                    // 通过截取URL来获取文件名
-                    URL downloadUrl = connection.getURL();
-                    // 获得实际下载文件的URL
-                    fileName = downloadUrl.getFile();
-                    fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
-                } else {
-                    fileName = URLDecoder.decode(fileName.substring(fileName.indexOf("filename=") + 9), "UTF-8");
-                    // 存在文件名会被包含在""里面，所以要去掉，否则读取异常
-                    fileName = fileName.replaceAll("\"", "");
-                }
-
-                File saveFile = new File(saveDir, fileName);
-                //如果文件名重复
-                int index = 1;
-                while (saveFile.exists()) {
-                    saveFile = new File(saveDir, FileUtil.increaseFileName(fileName, index));
-                    index++;
-                }
-                taskInfo.setFileName(saveFile.getName());
             } catch (MalformedURLException e) {
                 e.printStackTrace();
             } catch (UnsupportedEncodingException e) {
@@ -166,11 +168,14 @@ public class TaskRepository {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
             //更新task并通知前端
             long id = taskDao.insert(taskInfo);
             taskInfo.setId(id);
             taskList.addValue(taskInfo);
+
+            if(!canConnection){
+                return null ;
+            }
             return taskInfo ;
         }
 
@@ -179,6 +184,10 @@ public class TaskRepository {
         @Override
         protected void onPostExecute(TaskInfo taskInfo) {
             super.onPostExecute(taskInfo);
+            if (taskInfo==null){
+                //说明网络连不上
+                return;
+            }
             Future future = threadPoolExecutor.submit(new DownloadTask(taskDao, saveDir, taskList, taskInfo));
             taskInfo.setTaskThraed(future);
         }
