@@ -8,13 +8,15 @@ import androidx.room.Entity;
 import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
 
+import java.io.Serializable;
 import java.util.concurrent.Future;
 
 import nju.software.downloader.R;
+import nju.software.downloader.util.Constant;
 
 
 @Entity(tableName = "TaskInfo_Table")
-public class TaskInfo {
+public class TaskInfo implements Serializable {
 
     @NonNull
     @ColumnInfo(name = "id")
@@ -33,8 +35,9 @@ public class TaskInfo {
     @ColumnInfo(name = "length")
     private Integer progress ;
 
-    @ColumnInfo(name = "speed")
-    private String speed ="0K/s";
+
+    @Ignore
+    private String speed = Constant.WAITTING;
 
     @ColumnInfo(name = "paused")
     private boolean paused ;
@@ -44,6 +47,9 @@ public class TaskInfo {
 
     @Ignore
     private Future taskThraed ;
+
+    @Ignore
+    private boolean selected ;
     public TaskInfo(@NonNull String url){
         this.url = url ;
 
@@ -120,15 +126,26 @@ public class TaskInfo {
         this.taskThraed = taskThraed;
     }
 
+
+    public boolean isSelected() {
+        return selected;
+    }
+
+    public void setSelected(boolean selected) {
+        this.selected = selected;
+    }
+
     public void updateByAnotherOne(TaskInfo another){
         if(another==null){
             return;
         }
+        this.taskThraed = another.taskThraed ;
         this.finished = another.finished ;
         this.fileName = another.fileName ;
         this.progress = another.progress ;
         this.paused = another.paused ;
         this.speed = another.speed ;
+        this.selected = another.selected ;
     }
 
     @Override

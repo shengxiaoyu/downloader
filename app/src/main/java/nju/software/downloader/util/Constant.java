@@ -13,4 +13,18 @@ public class Constant {
 
     //同时最大下载数
     public static final int MAX_TASKS = 2 ;
+
+    public static final int TIMES_UPDATE_PROGRESS = 20 ;
+
+    public static final int KB = 1<<10 ;
+
+    public static final int MB = 1<<20 ;
+
+    public static final int GB = 1<<30 ;
+
+    public static final String WAITTING = "Waiting..." ;
+
+    public static final String PAUSE = "Pausing..." ;
+
+    public static final String EMPTY = "No Task Info" ;
 }

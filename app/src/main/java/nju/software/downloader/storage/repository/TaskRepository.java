@@ -100,6 +100,8 @@ public class TaskRepository {
             Future future = threadPoolExecutor.submit(new DownloadTask(taskDao, saveDir, taskList, task));
             task.setTaskThraed(future);
             task.setPaused(false);
+            task.setSpeed(Constant.WAITTING);
+            taskList.updateValue(task);
         } else {
             //原先是下载状态
             Future taskThraed = task.getTaskThraed();
@@ -108,10 +110,16 @@ public class TaskRepository {
             if (taskThraed != null && !taskThraed.isDone()) {
                 taskThraed.cancel(true);
                 task.setPaused(true);
+                task.setSpeed(Constant.PAUSE);
                 taskList.updateValue(task);
             }
         }
 
+    }
+
+    public void selectTask(TaskInfo taskInfo) {
+        taskInfo.setSelected(!taskInfo.isSelected());
+        taskList.updateValue(taskInfo);
     }
 
     public class addTask extends AsyncTask<TaskInfo, Void, TaskInfo> {

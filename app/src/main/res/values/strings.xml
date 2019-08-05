@@ -4,5 +4,7 @@
     <string name="hint_word">Url...</string>
     <string name="button_save">DOWNLOAD</string>
     <string name="empty_not_saved">URL is empty!</string>
-    <string name="delete_all">DeleteALl</string>
+    <string name="delete_selected">DeleteSelected</string>
+    <string name="selected">To selected</string>
+    <string name="placeholder">-</string>
 </resources>

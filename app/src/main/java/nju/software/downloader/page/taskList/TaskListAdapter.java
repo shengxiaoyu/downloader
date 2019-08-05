@@ -5,19 +5,24 @@ import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.chip.Chip;
+
 import java.util.List;
 
 import nju.software.downloader.R;
 import nju.software.downloader.model.TaskInfo;
+import nju.software.downloader.util.Constant;
 
-public class TaskListAdapter extends RecyclerView.Adapter {
+public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHolder> {
     private final LayoutInflater mInflater;
 
     private List<TaskInfo> mTaskInfos; // Cached copy of words
@@ -31,6 +36,7 @@ public class TaskListAdapter extends RecyclerView.Adapter {
         this.taskViewModel = myTaskViewModel ;
     }
 
+    @NonNull
     @Override
     public TaskHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View itemView = mInflater.inflate(R.layout.recyclerview_item, parent, false);
@@ -38,41 +44,19 @@ public class TaskListAdapter extends RecyclerView.Adapter {
     }
 
     @Override
-    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull TaskHolder holder, int position) {
         if (mTaskInfos != null) {
             TaskInfo current = mTaskInfos.get(position);
-            ((TaskHolder) holder).fileNameView.setText(current.getFileName()==null?current.getUrl():current.getFileName());
-            ((TaskHolder) holder).progressBar.setProgress(current.getProgress()==null?0:current.getProgress());
-            ((TaskHolder) holder).speedView.setText(current.getSpeed());
-
-            if(current.isPaused()){
-                final Drawable drawable;
-                int sdk = android.os.Build.VERSION.SDK_INT;
-                if(sdk < 16) {
-                    drawable =  context.getResources().getDrawable(R.drawable.pause_progress_bar);
-                } else {
-                    drawable = ContextCompat.getDrawable(context, R.drawable.pause_progress_bar);
-                }
-                ((TaskHolder) holder).progressBar.setProgressDrawable(drawable) ;
-            }else {
-                final Drawable drawable;
-                int sdk = android.os.Build.VERSION.SDK_INT;
-                if(sdk < 16) {
-                    drawable =  context.getResources().getDrawable(R.drawable.running_progress_bar);
-                } else {
-                    drawable = ContextCompat.getDrawable(context, R.drawable.running_progress_bar);
-                }
-                ((TaskHolder) holder).progressBar.setProgressDrawable(drawable) ;
-            }
+            holder.bind(current);
         } else {
             // Covers the case of data not being ready yet.
-            ((TaskHolder) holder).fileNameView.setText("No TaskInfo");
-            ((TaskHolder) holder).progressBar.setProgress(0);
+            holder.fileNameView.setText(Constant.EMPTY);
+            holder.progressBar.setProgress(0);
         }
     }
 
 
-    public void setFiles(List<TaskInfo> taskInfos){
+    void setFiles(List<TaskInfo> taskInfos){
         mTaskInfos = taskInfos;
         notifyDataSetChanged();
     }
@@ -86,20 +70,54 @@ public class TaskListAdapter extends RecyclerView.Adapter {
         else return 0;
     }
     //定义单个item如何展示
-    class TaskHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
+    class TaskHolder extends RecyclerView.ViewHolder implements View.OnClickListener, View.OnLongClickListener {
         private final TextView fileNameView;
         private final TextView speedView ;
         private final ProgressBar progressBar ;
+        private final ImageView selectView;
 
         private TaskHolder(View itemView) {
             super(itemView);
             progressBar = itemView.findViewById(R.id.progressBar) ;
             speedView = itemView.findViewById(R.id.speed_tv) ;
             fileNameView = itemView.findViewById(R.id.filename_tv);
+            selectView = itemView.findViewById(R.id.select_iv) ;
             itemView.setOnClickListener(this);
+            itemView.setOnLongClickListener(this);
+        }
+        //单个item如何展示
+        void bind(final TaskInfo current){
+            if(current==null){
+                fileNameView.setText(Constant.EMPTY);
+                progressBar.setProgress(0);
+            }
+            fileNameView.setText(current.getFileName()==null?current.getUrl():current.getFileName());
+            progressBar.setProgress(current.getProgress()==null?0:current.getProgress());
 
+            if(current.isPaused()){
+                final Drawable drawable;
+                int sdk = android.os.Build.VERSION.SDK_INT;
+                if(sdk < 16) {
+                    drawable =  context.getResources().getDrawable(R.drawable.pause_progress_bar);
+                } else {
+                    drawable = ContextCompat.getDrawable(context, R.drawable.pause_progress_bar);
+                }
+                progressBar.setProgressDrawable(drawable) ;
+            }else {
+                final Drawable drawable;
+                int sdk = android.os.Build.VERSION.SDK_INT;
+                if(sdk < 16) {
+                    drawable =  context.getResources().getDrawable(R.drawable.running_progress_bar);
+                } else {
+                    drawable = ContextCompat.getDrawable(context, R.drawable.running_progress_bar);
+                }
+                progressBar.setProgressDrawable(drawable) ;
+            }
+            speedView.setText(current.getSpeed());
+            selectView.setVisibility(current.isSelected()?View.VISIBLE:View.GONE);
         }
 
+        //单击：暂停、开始
         @Override
         public void onClick(View view) {
             int layoutPosition = getLayoutPosition();
@@ -107,9 +125,20 @@ public class TaskListAdapter extends RecyclerView.Adapter {
             /**
              * 暂停或继续
              */
+            taskInfo.setSelected(!taskInfo.isPaused());
             if(!taskInfo.isFinished()) {
                 taskViewModel.pasueOrBegin(taskInfo);
             }
+        }
+
+        //长按：选中
+        @Override
+        public boolean onLongClick(View view) {
+            int layoutPosition = getLayoutPosition();
+            TaskInfo taskInfo = mTaskInfos.get(layoutPosition);
+            taskViewModel.selectTask(taskInfo) ;
+            Toast.makeText(context,"选中"+layoutPosition,Toast.LENGTH_SHORT).show();
+            return true;
         }
     }
 

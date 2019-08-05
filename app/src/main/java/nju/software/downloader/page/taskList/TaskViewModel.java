@@ -22,24 +22,36 @@ public class TaskViewModel extends AndroidViewModel {
         repository = new TaskRepository(application) ;
     }
 
-    public LiveData<List<TaskInfo>> getAllFiles(){
+    LiveData<List<TaskInfo>> getAllFiles(){
         return repository.getAllFiles() ;
     }
 
-    public void insert(TaskInfo taskInfo){
+    void insert(TaskInfo taskInfo){
         Log.d("TaskViewModel","保存下载信息:"+ taskInfo.getUrl()) ;
         repository.insert(taskInfo);
     }
 
-    public void deleteALl(){
+    void multiDelete(){
+        List<TaskInfo> taskInfos = repository.getAllFiles().getValue() ;
+        if(taskInfos!=null){
+            for(TaskInfo taskInfo:taskInfos){
+                if(taskInfo.isSelected()){
+                    repository.delete(taskInfo);
+                }
+            }
+        }
         repository.deleteAll();
     }
 
-    public void delete(TaskInfo file){
+    void delete(TaskInfo file){
         repository.delete(file);
     }
 
-    public void pasueOrBegin(TaskInfo taskInfo) {
+    void pasueOrBegin(TaskInfo taskInfo) {
         repository.pauseOrBegin(taskInfo) ;
+    }
+
+    public void selectTask(TaskInfo taskInfo) {
+        repository.selectTask(taskInfo) ;
     }
 }

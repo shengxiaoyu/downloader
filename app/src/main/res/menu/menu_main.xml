@@ -3,8 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:context=".page.taskList.MainActivity">
     <item
-        android:id="@+id/delete_all"
+        android:id="@+id/deleteSelected"
         android:orderInCategory="100"
-        android:title="@string/delete_all"
+        android:title="@string/delete_selected"
         app:showAsAction="never" />
 </menu>

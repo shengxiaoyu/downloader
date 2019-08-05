@@ -71,12 +71,12 @@ public class MainActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
         //删除全部
-        if (id == R.id.delete_all) {
+        if (id == R.id.deleteSelected) {
             // Add a toast just for confirmation
             Toast.makeText(this, "Clearing tasks...",
                     Toast.LENGTH_SHORT).show();
             // Delete the existing data
-            mTaskViewModel.deleteALl();
+            mTaskViewModel.multiDelete();
             return true;
         }
 

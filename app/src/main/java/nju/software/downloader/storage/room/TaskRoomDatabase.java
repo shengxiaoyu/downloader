@@ -14,7 +14,7 @@ import nju.software.downloader.model.TaskInfo;
 import nju.software.downloader.storage.dao.TaskDao;
 
 //定义哪些entities属于此数据库
-@Database(entities = {TaskInfo.class},version = 2,exportSchema = false)
+@Database(entities = {TaskInfo.class},version = 3,exportSchema = false)
 public abstract class TaskRoomDatabase extends RoomDatabase {
 
     public abstract TaskDao taskDao() ;
