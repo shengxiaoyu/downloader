@@ -1,6 +1,7 @@
 package nju.software.downloader.page.taskList;
 
 import android.content.Context;
+import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -8,6 +9,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.List;
@@ -19,26 +21,44 @@ public class TaskListAdapter extends RecyclerView.Adapter {
     private final LayoutInflater mInflater;
 
     private List<TaskInfo> mTaskInfos; // Cached copy of words
+    private TaskViewModel taskViewModel ;
 
-    public TaskListAdapter(Context context) { mInflater = LayoutInflater.from(context); }
+    private Context context ;
+
+    public TaskListAdapter(Context context,TaskViewModel myTaskViewModel) {
+        this.context = context ;
+        mInflater = LayoutInflater.from(context);
+        this.taskViewModel = myTaskViewModel ;
+    }
 
     @Override
-    public FileViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+    public TaskHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View itemView = mInflater.inflate(R.layout.recyclerview_item, parent, false);
-        return new FileViewHolder(itemView);
+        return new TaskHolder(itemView);
     }
 
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
         if (mTaskInfos != null) {
             TaskInfo current = mTaskInfos.get(position);
-            ((FileViewHolder) holder).wordItemView.setText(current.getFileName()==null?current.getUrl():current.getFileName());
-            ((FileViewHolder) holder).progressBar.setProgress(current.getProgress()==null?0:current.getProgress());
+            ((TaskHolder) holder).fileNameView.setText(current.getFileName()==null?current.getUrl():current.getFileName());
+            ((TaskHolder) holder).progressBar.setProgress(current.getProgress()==null?0:current.getProgress());
+            ((TaskHolder) holder).speedView.setText(current.getSpeed());
 
+            if(current.isPaused()){
+                final Drawable drawable;
+                int sdk = android.os.Build.VERSION.SDK_INT;
+                if(sdk < 16) {
+                    drawable =  context.getResources().getDrawable(R.drawable.pause_progress_bar);
+                } else {
+                    drawable = ContextCompat.getDrawable(context, R.drawable.pause_progress_bar);
+                }
+                ((TaskHolder) holder).progressBar.setProgressDrawable(drawable) ;
+            }
         } else {
             // Covers the case of data not being ready yet.
-            ((FileViewHolder) holder).wordItemView.setText("No TaskInfo");
-            ((FileViewHolder) holder).progressBar.setProgress(0);
+            ((TaskHolder) holder).fileNameView.setText("No TaskInfo");
+            ((TaskHolder) holder).progressBar.setProgress(0);
         }
     }
 
@@ -57,14 +77,28 @@ public class TaskListAdapter extends RecyclerView.Adapter {
         else return 0;
     }
     //定义单个item如何展示
-    class FileViewHolder extends RecyclerView.ViewHolder {
-        private final TextView wordItemView;
+    class TaskHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
+        private final TextView fileNameView;
+        private final TextView speedView ;
         private final ProgressBar progressBar ;
 
-        private FileViewHolder(View itemView) {
+        private TaskHolder(View itemView) {
             super(itemView);
-            progressBar = itemView.findViewById(R.id.determinateBar) ;
-            wordItemView = itemView.findViewById(R.id.textView);
+            progressBar = itemView.findViewById(R.id.progressBar) ;
+            speedView = itemView.findViewById(R.id.speed_tv) ;
+            fileNameView = itemView.findViewById(R.id.filename_tv);
+            itemView.setOnClickListener(this);
+
+        }
+
+        @Override
+        public void onClick(View view) {
+            int layoutPosition = getLayoutPosition();
+            TaskInfo taskInfo = mTaskInfos.get(layoutPosition);
+            /**
+             * 暂停或继续
+             */
+            taskViewModel.pasueOrBegin(taskInfo);
         }
     }
 

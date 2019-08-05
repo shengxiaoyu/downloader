@@ -14,10 +14,10 @@ import nju.software.downloader.model.TaskInfo;
 import nju.software.downloader.storage.dao.TaskDao;
 
 //定义哪些entities属于此数据库
-@Database(entities = {TaskInfo.class},version = 1,exportSchema = false)
+@Database(entities = {TaskInfo.class},version = 2,exportSchema = false)
 public abstract class TaskRoomDatabase extends RoomDatabase {
 
-    public abstract TaskDao wordDao() ;
+    public abstract TaskDao taskDao() ;
 
     private static volatile TaskRoomDatabase INSTANCE ;
 
@@ -31,7 +31,6 @@ public abstract class TaskRoomDatabase extends RoomDatabase {
                             TaskRoomDatabase.class,"file_database")
                             //定义如何维护数据库变化，在此简单地重建删除
                             .fallbackToDestructiveMigration()
-//                            .addCallback(sRoomDatabaseCallback)
                             .build() ;
                 }
             }

@@ -8,4 +8,8 @@ public class Constant {
     public static String EXTERNAL_BASE_SAVE_PATH = "downloader" ;
 
     public static String INTERNAL_BASE_SAVE_PATH ;
+
+
+    //申请外存读写权限代码
+    public static final int PERMISSIONS_REQUEST_EXTERNAL_STORAGE = 1 ;
 }

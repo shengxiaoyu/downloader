@@ -15,13 +15,11 @@ import nju.software.downloader.storage.repository.TaskRepository;
 //以一种不受配置更新影响的形式保存ui数据，不能传递context到viewmodel中
 public class TaskViewModel extends AndroidViewModel {
     private TaskRepository repository ;
-    private LiveData<List<TaskInfo>> files ;
 
 
     public TaskViewModel(@NonNull Application application) {
         super(application);
         repository = new TaskRepository(application) ;
-        files = repository.getAllFiles() ;
     }
 
     public LiveData<List<TaskInfo>> getAllFiles(){
@@ -41,4 +39,7 @@ public class TaskViewModel extends AndroidViewModel {
         repository.delete(file);
     }
 
+    public void pasueOrBegin(TaskInfo taskInfo) {
+        repository.pauseOrBegin(taskInfo) ;
+    }
 }

@@ -25,7 +25,7 @@ public interface TaskDao {
 
     //使用LiveData包装，已到达观察者自动观察更新的目的
     @Query("SELECT * FROM TaskInfo_Table ORDER BY id ASC")
-    LiveData<List<TaskInfo>> getAllWords() ;
+    List<TaskInfo> getAll() ;
 
     @Update
     void update(TaskInfo taskInfo) ;

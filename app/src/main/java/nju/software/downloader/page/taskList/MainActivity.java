@@ -1,33 +1,37 @@
 package nju.software.downloader.page.taskList;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
-
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.util.Log;
-import android.view.View;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.widget.Toast;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.util.List;
 
 import nju.software.downloader.R;
-import nju.software.downloader.page.addTask.AddTaskActivity;
 import nju.software.downloader.model.TaskInfo;
+import nju.software.downloader.page.addTask.AddTaskActivity;
 
 import static nju.software.downloader.util.Constant.NEW_DOWNLADER_TASK_ACTIVITY_REQUEST_CODE;
+import static nju.software.downloader.util.Constant.PERMISSIONS_REQUEST_EXTERNAL_STORAGE;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -42,11 +46,26 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        //将fileviewModel和ui controller绑定，但是activity destory时，viewmodel并不会销毁，重新创建时则会重新返回存在的activity
+        mTaskViewModel = ViewModelProviders.of(this).get(TaskViewModel.class);
+
         //添加展示列表
         RecyclerView recyclerView = findViewById(R.id.recyclerview);
-        final TaskListAdapter adapter = new TaskListAdapter(this);
+        final TaskListAdapter adapter = new TaskListAdapter(this,mTaskViewModel);
         recyclerView.setAdapter(adapter);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+        //添加对fileList的观察，
+        mTaskViewModel.getAllFiles().observe(this, new Observer<List<TaskInfo>>() {
+
+            //当被观察数据更新时，调用这个方法
+            @Override
+            public void onChanged(@Nullable final List<TaskInfo> taskInfos) {
+                // Update the cached copy of the taskInfos in the adapter.
+                adapter.setFiles(taskInfos);
+            }
+        });
 
         //左右滑动删除任务
         ItemTouchHelper helper = new ItemTouchHelper(
@@ -72,7 +91,6 @@ public class MainActivity extends AppCompatActivity {
                                 taskAtPosition.getUrl(), Toast.LENGTH_LONG).show();
                         Log.d(LOG_TAG,"左右滑动删除!") ;
                         mTaskViewModel.delete(taskAtPosition);
-
                     }
                     @Override
                     public float getSwipeThreshold(@NonNull RecyclerView.ViewHolder viewHolder) {
@@ -92,22 +110,9 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        //将fileviewModel和ui controller绑定，但是activity destory时，viewmodel并不会销毁，重新创建时则会重新返回存在的activity
-        mTaskViewModel = ViewModelProviders.of(this).get(TaskViewModel.class);
 
-
-        //添加对fileList的观察，
-        mTaskViewModel.getAllFiles().observe(this, new Observer<List<TaskInfo>>() {
-
-            //当被观察数据更新时，调用这个方法
-            @Override
-            public void onChanged(@Nullable final List<TaskInfo> taskInfos) {
-                // Update the cached copy of the taskInfos in the adapter.
-                adapter.setFiles(taskInfos);
-            }
-        });
-
-
+        //检查并申请权限
+        checkAndRequestPermissions() ;
     }
 
     @Override
@@ -119,17 +124,12 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
+        //删除全部
         if (id == R.id.delete_all) {
             // Add a toast just for confirmation
             Toast.makeText(this, "Clearing tasks...",
                     Toast.LENGTH_SHORT).show();
-
             // Delete the existing data
             mTaskViewModel.deleteALl();
             return true;
@@ -153,5 +153,29 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void checkAndRequestPermissions(){
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)!= PackageManager.PERMISSION_GRANTED){
+            //没有权限，则申请
 
+            if(ActivityCompat.shouldShowRequestPermissionRationale(this,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE)){
+                //如果之前拒绝过，则解释为何申请权限
+                Toast.makeText(this,"下载保存文件需要访问您手机存储",Toast.LENGTH_SHORT).show();
+            }
+            ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.READ_EXTERNAL_STORAGE,Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_EXTERNAL_STORAGE);
+        }
+    }
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch (requestCode){
+            case PERMISSIONS_REQUEST_EXTERNAL_STORAGE:
+                if(grantResults.length>0&&grantResults[0]==PackageManager.PERMISSION_GRANTED){
+                    //获取到权限
+                }else {
+                    Toast.makeText(this,"未授权，下载文件无法保存",Toast.LENGTH_SHORT).show();
+//                    finish();
+                }
+        }
+    }
 }
