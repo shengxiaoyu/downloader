@@ -50,66 +50,11 @@ public class MainActivity extends AppCompatActivity {
         //将fileviewModel和ui controller绑定，但是activity destory时，viewmodel并不会销毁，重新创建时则会重新返回存在的activity
         mTaskViewModel = ViewModelProviders.of(this).get(TaskViewModel.class);
 
-        //添加展示列表
-        RecyclerView recyclerView = findViewById(R.id.recyclerview);
-        final TaskListAdapter adapter = new TaskListAdapter(this,mTaskViewModel);
-        recyclerView.setAdapter(adapter);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        //初始化下载任务列表
+        initListView();
 
-        //添加对fileList的观察，
-        mTaskViewModel.getAllFiles().observe(this, new Observer<List<TaskInfo>>() {
-
-            //当被观察数据更新时，调用这个方法
-            @Override
-            public void onChanged(@Nullable final List<TaskInfo> taskInfos) {
-                // Update the cached copy of the taskInfos in the adapter.
-                adapter.setFiles(taskInfos);
-            }
-        });
-
-        //左右滑动删除任务
-        ItemTouchHelper helper = new ItemTouchHelper(
-                new ItemTouchHelper.Callback() {
-                    @Override
-                    public int getMovementFlags(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
-                        int dragFlags = ItemTouchHelper.UP | ItemTouchHelper.DOWN;
-                        int swipeFlags = ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT;
-                        return makeMovementFlags(dragFlags, swipeFlags);
-                    }
-
-
-                    @Override
-                    public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
-                        return false;
-                    }
-
-                    @Override
-                    public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
-                        int layoutPosition = viewHolder.getLayoutPosition();
-                        TaskInfo taskAtPosition = adapter.getTaskAtPosition(layoutPosition);
-                        Toast.makeText(MainActivity.this, "Deleting " +
-                                taskAtPosition.getUrl(), Toast.LENGTH_LONG).show();
-                        Log.d(LOG_TAG,"左右滑动删除!") ;
-                        mTaskViewModel.delete(taskAtPosition);
-                    }
-                    @Override
-                    public float getSwipeThreshold(@NonNull RecyclerView.ViewHolder viewHolder) {
-                        return 0.5f;
-                    }
-                }
-        ) ;
-        helper.attachToRecyclerView(recyclerView);
-
-        //新增下载任务
-        FloatingActionButton fab = findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(MainActivity.this, AddTaskActivity.class);
-                startActivityForResult(intent, NEW_DOWNLADER_TASK_ACTIVITY_REQUEST_CODE);
-            }
-        });
-
+        //初始化Fab-新增
+        initFabAdd();
 
         //检查并申请权限
         checkAndRequestPermissions() ;
@@ -153,6 +98,67 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void initListView(){
+        //添加展示列表
+        RecyclerView recyclerView = findViewById(R.id.recyclerview);
+        final TaskListAdapter adapter = new TaskListAdapter(this,mTaskViewModel);
+        recyclerView.setAdapter(adapter);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+        //添加对fileList的观察，
+        mTaskViewModel.getAllFiles().observe(this, new Observer<List<TaskInfo>>() {
+
+            //当被观察数据更新时，调用这个方法
+            @Override
+            public void onChanged(@Nullable final List<TaskInfo> taskInfos) {
+                // Update the cached copy of the taskInfos in the adapter.
+                adapter.setFiles(taskInfos);
+            }
+        });
+        //左右滑动删除任务
+        ItemTouchHelper helper = new ItemTouchHelper(
+                new ItemTouchHelper.Callback() {
+                    @Override
+                    public int getMovementFlags(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
+                        int dragFlags = ItemTouchHelper.UP | ItemTouchHelper.DOWN;
+                        int swipeFlags = ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT;
+                        return makeMovementFlags(dragFlags, swipeFlags);
+                    }
+
+
+                    @Override
+                    public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
+                        return false;
+                    }
+
+                    @Override
+                    public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+                        int layoutPosition = viewHolder.getLayoutPosition();
+                        TaskInfo taskAtPosition = adapter.getTaskAtPosition(layoutPosition);
+                        Toast.makeText(MainActivity.this, "Deleting " +
+                                taskAtPosition.getUrl(), Toast.LENGTH_LONG).show();
+                        Log.d(LOG_TAG,"左右滑动删除!") ;
+                        mTaskViewModel.delete(taskAtPosition);
+                    }
+                    @Override
+                    public float getSwipeThreshold(@NonNull RecyclerView.ViewHolder viewHolder) {
+                        return 0.5f;
+                    }
+                }
+        ) ;
+        helper.attachToRecyclerView(recyclerView);
+    }
+    private void initFabAdd(){
+        //新增下载任务
+        FloatingActionButton fab = findViewById(R.id.fab);
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(MainActivity.this, AddTaskActivity.class);
+                startActivityForResult(intent, NEW_DOWNLADER_TASK_ACTIVITY_REQUEST_CODE);
+            }
+        });
+    }
     public void checkAndRequestPermissions(){
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)!= PackageManager.PERMISSION_GRANTED){
             //没有权限，则申请

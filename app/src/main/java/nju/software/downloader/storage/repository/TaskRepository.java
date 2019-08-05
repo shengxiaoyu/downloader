@@ -5,10 +5,23 @@ import android.os.AsyncTask;
 import android.os.Environment;
 import android.util.Log;
 
+import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLDecoder;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import nju.software.downloader.model.TaskInfo;
 import nju.software.downloader.model.TaskListLiveData;
@@ -18,64 +31,67 @@ import nju.software.downloader.storage.repository.asyncTasks.GetAllAsync;
 import nju.software.downloader.storage.repository.asyncTasks.deleteAllTask;
 import nju.software.downloader.storage.repository.asyncTasks.deleteSingleTask;
 import nju.software.downloader.storage.room.TaskRoomDatabase;
+import nju.software.downloader.util.Constant;
+import nju.software.downloader.util.FileUtil;
 
 //封装数据的获取，可以从数据库，从网络
 public class TaskRepository {
     private TaskDao taskDao;
     private volatile TaskListLiveData taskList = new TaskListLiveData();
-    private static File saveDir ;
-    private static String LOG_TAG = TaskRepository.class.getSimpleName() ;
+    private static File saveDir;
+    private static String LOG_TAG = TaskRepository.class.getSimpleName();
 
-    public TaskRepository(Application application){
+    private static ExecutorService threadPoolExecutor;
+
+
+    public TaskRepository(Application application) {
         //下载保存到外村Download目录下
-        saveDir = application.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ;
-        Log.d(LOG_TAG,"存储目录："+saveDir.getAbsolutePath()) ;
+        saveDir = application.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+        Log.d(LOG_TAG, "存储目录：" + saveDir.getAbsolutePath());
 
-        TaskRoomDatabase db = TaskRoomDatabase.getDatabsae(application) ;
-        taskDao = db.taskDao() ;
+        TaskRoomDatabase db = TaskRoomDatabase.getDatabsae(application);
+        taskDao = db.taskDao();
 
         //初始化taskList
         new GetAllAsync(taskDao, taskList).execute();
 
+        threadPoolExecutor = Executors.newFixedThreadPool(Constant.MAX_TASKS);
     }
 
     //LiveData room自动启动worker线程获取数据
-    public MutableLiveData<List<TaskInfo>> getAllFiles(){
-        return taskList ;
+    public LiveData<List<TaskInfo>> getAllFiles() {
+        return taskList;
     }
 
     //插入任务，使用异步线程
-    public void insert(TaskInfo taskInfo){
-
-        DownloadTask downloadTask = new DownloadTask(taskDao,saveDir,taskList);
-        downloadTask.execute(taskInfo) ;
-        taskInfo.setTaskThraed(downloadTask);
+    public void insert(TaskInfo taskInfo) {
+        new addTask().execute(taskInfo) ;
     }
 
 
     //删除所有
-    public void deleteAll(){
-        new deleteAllTask(taskDao).execute() ;
+    public void deleteAll() {
+        new deleteAllTask(taskDao).execute();
     }
 
     //删除单个
-    public void delete(TaskInfo task){
+    public void delete(TaskInfo task) {
 
-        //判断是否已经下载完成，如果为完成，则取消线程
-        AsyncTask taskThraed = task.getTaskThraed();
-        if(taskThraed!=null && taskThraed.getStatus()!= AsyncTask.Status.FINISHED
-                && taskThraed.cancel(true)){
-            new deleteSingleTask(taskList,taskDao,saveDir).execute(task) ;
-        }else {
+        //判断是否已经下载完成，如果未完成，则取消或中断任务
+        Future taskThraed = task.getTaskThraed();
+        if (taskThraed != null && !taskThraed.isDone()) {
+            taskThraed.cancel(true);
+            new deleteSingleTask(taskList, taskDao, saveDir).execute(task);
+        } else {
             //如果已经完成，只需要直接删除
             //启用额外线程删除数据库数据
-            new deleteSingleTask(taskList,taskDao,saveDir).execute(task) ;
+            new deleteSingleTask(taskList, taskDao, saveDir).execute(task);
         }
     }
 
     public void pauseOrBegin(TaskInfo task) {
 
-        if(task.isFinished())
+        if (task.isFinished())
             return;
 
         if (task.isPaused()) {
@@ -83,16 +99,88 @@ public class TaskRepository {
             /**
              * 进入等待下载状态 起一个后台任务
              */
-        }else{
+        } else {
             //原先是下载状态
-            AsyncTask taskThraed = task.getTaskThraed();
+            Future taskThraed = task.getTaskThraed();
             //判断是否已经下载完成，如果为完成，则取消线程
-            if(taskThraed!=null && taskThraed.getStatus()!= AsyncTask.Status.FINISHED) {
+            if (taskThraed != null && !taskThraed.isDone()) {
                 taskThraed.cancel(true);
             }
             task.setPaused(true);
             taskList.updateValue(task);
         }
 
+    }
+
+    public class addTask extends AsyncTask<TaskInfo, Void, TaskInfo> {
+
+        @Override
+        protected TaskInfo doInBackground(TaskInfo... taskInfos) {
+            InputStream input = null;
+            OutputStream output = null;
+            HttpURLConnection connection = null;
+
+            TaskInfo taskInfo = taskInfos[0];
+
+
+            //获取文件名，确定文件存储路径
+            try {
+                URL url = new URL(taskInfo.getUrl());
+                connection = (HttpURLConnection) url.openConnection();
+                connection.connect();
+
+                // expect HTTP 200 OK, so we don't mistakenly save error report
+                // instead of the file
+                if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                    Log.d(LOG_TAG, "Server returned HTTP " + connection.getResponseCode()
+                            + " " + connection.getResponseMessage());
+                }
+                Log.d(LOG_TAG, "网络连接成功");
+
+                //获取文件名
+                String fileName = connection.getHeaderField("Content-Disposition");
+                if (fileName == null || fileName.length() < 1) {
+                    // 通过截取URL来获取文件名
+                    URL downloadUrl = connection.getURL();
+                    // 获得实际下载文件的URL
+                    fileName = downloadUrl.getFile();
+                    fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
+                } else {
+                    fileName = URLDecoder.decode(fileName.substring(fileName.indexOf("filename=") + 9), "UTF-8");
+                    // 存在文件名会被包含在""里面，所以要去掉，否则读取异常
+                    fileName = fileName.replaceAll("\"", "");
+                }
+
+                File saveFile = new File(saveDir, fileName);
+                //如果文件名重复
+                int index = 1;
+                while (saveFile.exists()) {
+                    saveFile = new File(saveDir, FileUtil.increaseFileName(fileName, index));
+                    index++;
+                }
+                taskInfo.setFileName(saveFile.getName());
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            //更新task并通知前端
+            long id = taskDao.insert(taskInfo);
+            taskInfo.setId(id);
+            taskList.addValue(taskInfo);
+            return taskInfo ;
+        }
+
+
+        //只有先将任务加到数据库和前端展示开始了，才真正的开始网络下载部分
+        @Override
+        protected void onPostExecute(TaskInfo taskInfo) {
+            super.onPostExecute(taskInfo);
+            Future future = threadPoolExecutor.submit(new DownloadTask(taskDao, saveDir, taskList, taskInfo));
+            taskInfo.setTaskThraed(future);
+        }
     }
 }

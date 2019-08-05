@@ -8,6 +8,10 @@ import androidx.room.Entity;
 import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
 
+import java.util.concurrent.Future;
+
+import nju.software.downloader.R;
+
 
 @Entity(tableName = "TaskInfo_Table")
 public class TaskInfo {
@@ -39,7 +43,7 @@ public class TaskInfo {
     private boolean finished ;
 
     @Ignore
-    private AsyncTask taskThraed ;
+    private Future taskThraed ;
     public TaskInfo(@NonNull String url){
         this.url = url ;
 
@@ -108,11 +112,11 @@ public class TaskInfo {
         this.paused = paused;
     }
 
-    public AsyncTask getTaskThraed() {
+    public Future getTaskThraed() {
         return taskThraed;
     }
 
-    public void setTaskThraed(AsyncTask taskThraed) {
+    public void setTaskThraed(Future taskThraed) {
         this.taskThraed = taskThraed;
     }
 

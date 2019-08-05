@@ -20,28 +20,23 @@ import nju.software.downloader.model.TaskListLiveData;
 import nju.software.downloader.storage.dao.TaskDao;
 import nju.software.downloader.util.FileUtil;
 
-public class DownloadTask extends AsyncTask<TaskInfo, Void, Void> {
+public class DownloadTask implements Runnable {
     private TaskListLiveData taskListLiveData ;
     private TaskDao taskDao;
     private File saveDir ;
+    private TaskInfo taskInfo ;
     private static final String LOG_TAG = DownloadTask.class.getSimpleName() ;
-    public DownloadTask(TaskDao taskDao, File saveDir, TaskListLiveData taskListLiveData) {
+    public DownloadTask(TaskDao taskDao, File saveDir, TaskListLiveData taskListLiveData,TaskInfo taskInfo) {
         this.taskListLiveData = taskListLiveData ;
         this.taskDao = taskDao;
         this.saveDir = saveDir ;
+        this.taskInfo = taskInfo ;
     }
-
     @Override
-    protected Void doInBackground(TaskInfo... taskInfos) {
+    public void run() {
         InputStream input = null;
         OutputStream output = null;
         HttpURLConnection connection = null;
-
-        TaskInfo taskInfo = taskInfos[0] ;
-        //先将任务更新：包括数据库和LiveData
-        long id = taskDao.insert(taskInfo);
-        taskInfo.setId(id);
-        taskListLiveData.addValue(taskInfo);
 
         try {
             URL url = new URL(taskInfo.getUrl());
@@ -49,42 +44,18 @@ public class DownloadTask extends AsyncTask<TaskInfo, Void, Void> {
             connection.connect();
 
             // expect HTTP 200 OK, so we don't mistakenly save error report
-            // instead of the file
             if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
                 Log.d(LOG_TAG, "Server returned HTTP " + connection.getResponseCode()
                         + " " + connection.getResponseMessage());
             }
             Log.d(LOG_TAG,"网络连接成功") ;
+
             // this will be useful to display download percentage
             // might be -1: server did not report the length
             int fileLength = connection.getContentLength();
 
-            // 通过Content-Disposition获取文件名
-            String fileName = connection.getHeaderField("Content-Disposition");
-            if (fileName == null || fileName.length() < 1) {
-                // 通过截取URL来获取文件名
-                URL downloadUrl = connection.getURL();
-                // 获得实际下载文件的URL
-                fileName = downloadUrl.getFile();
-                fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
-            } else {
-                fileName = URLDecoder.decode(fileName.substring(fileName.indexOf("filename=") + 9), "UTF-8");
-                // 存在文件名会被包含在""里面，所以要去掉，否则读取异常
-                fileName = fileName.replaceAll("\"", "");
-            }
-
-            File saveFile = new File(saveDir,fileName) ;
-            //如果文件名重复
-            int index = 1 ;
-            while (saveFile.exists()){
-                saveFile = new File(saveDir, FileUtil.increaseFileName(fileName,index)) ;
-                index++ ;
-            }
-            taskInfo.setFileName(saveFile.getName());
+            File saveFile = new File(saveDir,taskInfo.getFileName()) ;
             input = connection.getInputStream();
-            taskListLiveData.updateValue(taskInfo);
-
-
             output = new FileOutputStream(saveFile) ;
             Log.d(LOG_TAG,"下载保存地址："+saveFile.getAbsolutePath()) ;
 
@@ -98,20 +69,19 @@ public class DownloadTask extends AsyncTask<TaskInfo, Void, Void> {
             int count;
             while ((count = input.read(data)) != -1) {
                 // allow canceling with back button
-                if (isCancelled()) {
-                    return null;
+                if (Thread.currentThread().isInterrupted()) {
+                    taskDao.update(taskInfo);
+                    return ;
                 }
                 num += count ;
                 output.write(data, 0, count);
 
-                // 更新进度条
+                // 更新进度条,暂不更新数据库，等退出或者结束的时候一起更新
                 if (fileLength > 0 && num>fileLength/20) { // only if total length is known
                     total += num ;
                     taskInfo.setProgress((int) (total * 100 / fileLength));
                     num = 0;
-                    taskDao.update(taskInfo);
                     taskListLiveData.updateValue(taskInfo);
-
                 }
             }
             //下载完成进度条一定位100，也为了避免不知道下载总长度的情况
@@ -134,7 +104,5 @@ public class DownloadTask extends AsyncTask<TaskInfo, Void, Void> {
             if (connection != null)
                 connection.disconnect();
         }
-        return null;
     }
-
 }
