@@ -125,7 +125,6 @@ public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHo
             /**
              * 暂停或继续
              */
-            taskInfo.setSelected(!taskInfo.isPaused());
             if(!taskInfo.isFinished()) {
                 taskViewModel.pasueOrBegin(taskInfo);
             }
