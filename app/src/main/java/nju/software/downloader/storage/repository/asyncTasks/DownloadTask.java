@@ -18,18 +18,36 @@ import nju.software.downloader.model.TaskListLiveData;
 import nju.software.downloader.storage.dao.TaskDao;
 import nju.software.downloader.util.Constant;
 
-public class DownloadTask implements Runnable {
+public class DownloadTask implements Runnable,Comparable<DownloadTask>{
     private TaskListLiveData taskListLiveData ;
     private TaskDao taskDao;
     private File saveDir ;
     private TaskInfo taskInfo ;
     private static final String LOG_TAG = DownloadTask.class.getSimpleName() ;
+    private Thread runningThread ;
+    //运行状态0标识等待，1标识执行，2标识暂停，3标识取消，4标识完成
+    private volatile int status ;
+
+    //任务总共五个状态
+    public static final int WAITTING = 0 ;
+    public static final int RUNNING = 1 ;
+    public static final int PAUSE = 2 ;
+    public static final int FINISHED = 3 ;
+    public static final int DELETE = 4 ;
+
     public DownloadTask(TaskDao taskDao, File saveDir, TaskListLiveData taskListLiveData,TaskInfo taskInfo) {
         this.taskListLiveData = taskListLiveData ;
         this.taskDao = taskDao;
         this.saveDir = saveDir ;
+
+        //相互引用
         this.taskInfo = taskInfo ;
+        taskInfo.setDownloadTask(this);
+        taskInfo.setSpeed(Constant.WAITTING);
+        //初始为waitting态
+        status = WAITTING ;
     }
+
     @Override
     public void run() {
         File saveFile = new File(saveDir,taskInfo.getFileName()) ;
@@ -86,6 +104,7 @@ public class DownloadTask implements Runnable {
             while ((count = input.read(data)) != -1) {
                 // allow canceling
                 if (Thread.currentThread().isInterrupted()) {
+                    this.status = 2 ;
                     taskInfo.setSpeed(Constant.PAUSE);
                     taskDao.update(taskInfo);
                     return;
@@ -129,6 +148,7 @@ public class DownloadTask implements Runnable {
     }
 
     private void downloadDirectly(File saveFile){
+
         HttpURLConnection connection = null;
         InputStream input = null;
         OutputStream output = null;
@@ -162,7 +182,6 @@ public class DownloadTask implements Runnable {
             while ((count = input.read(data)) != -1) {
                 // allow canceling
                 if (Thread.currentThread().isInterrupted()) {
-                    taskInfo.setSpeed(Constant.PAUSE);
                     taskDao.update(taskInfo);
                     return ;
                 }
@@ -172,7 +191,10 @@ public class DownloadTask implements Runnable {
                 if (fileLength > 0 && num>fileLength/ Constant.TIMES_UPDATE_PROGRESS) { // only if total length is known
                     endTime = System.currentTimeMillis() ;
                     total += num ;
-                    long speed = num/((endTime-beginTime)/1000) ;
+                    long speed = 0 ;
+                    if(endTime!=beginTime){
+                        speed = num/(endTime-beginTime)/1000 ;
+                    }
                     if(speed>Constant.GB){
                         taskInfo.setSpeed(speed/Constant.GB+"GB/s");
                     }else if(speed>Constant.MB){
@@ -180,7 +202,11 @@ public class DownloadTask implements Runnable {
                     }else if(speed>Constant.KB){
                         taskInfo.setSpeed(speed/Constant.KB+"KB/s");
                     }else {
-                        taskInfo.setSpeed(speed+"B/s");
+                        if(speed==0){
+                            taskInfo.setSpeed("- B/s");
+                        }else {
+                            taskInfo.setSpeed(speed + "B/s");
+                        }
                     }
                     taskInfo.setProgress((int) (total * 100 / fileLength));
                     num = 0;
@@ -188,7 +214,7 @@ public class DownloadTask implements Runnable {
                 }
             }
             //下载完成进度条一定位100，也为了避免不知道下载总长度的情况
-            taskInfo.setProgress(100);
+//            taskInfo.setProgress(100);
             taskInfo.setFinished(true);
             taskListLiveData.updateValue(taskInfo);
 
@@ -209,5 +235,68 @@ public class DownloadTask implements Runnable {
             if (connection != null)
                 connection.disconnect();
         }
+    }
+
+
+    @Override
+    public int compareTo(DownloadTask downloadTask) {
+        return taskInfo.compareTo(downloadTask.taskInfo);
+    }
+
+    @Override
+    public int hashCode() {
+        return taskInfo.hashCode();
+    }
+
+
+    ///通过包装的TaskInfo来判断
+    @Override
+    public boolean equals(Object obj) {
+        if(obj==null){
+            return false ;
+        }
+        if(obj instanceof DownloadTask){
+            return ((DownloadTask)obj).taskInfo.equals(taskInfo) ;
+        }
+        return false;
+    }
+
+    public int getStatus() {
+        return status;
+    }
+
+    public void setStatus(int status) {
+        this.status = status;
+    }
+
+    /**
+     * 取消线程池中的任务
+     */
+    public void pause() {
+        if(runningThread!=null){
+            runningThread.interrupt();
+        }
+        //释放引用
+        taskInfo.setDownloadTask(null);
+        runningThread = null ;
+        status = DownloadTask.PAUSE;
+    }
+
+    public Thread getRunningThread() {
+        return runningThread;
+    }
+
+    public void setRunningThread(Thread runningThread) {
+        this.runningThread = runningThread;
+    }
+
+    public void delete() {
+        if(runningThread!=null){
+            runningThread.interrupt();
+        }
+        //释放引用
+        runningThread = null ;
+        taskInfo.setDownloadTask(null);
+        status = DownloadTask.DELETE;
     }
 }

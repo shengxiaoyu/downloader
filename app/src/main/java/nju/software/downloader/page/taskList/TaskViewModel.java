@@ -40,11 +40,10 @@ public class TaskViewModel extends AndroidViewModel {
                 }
             }
         }
-        repository.deleteAll();
     }
 
-    void delete(TaskInfo file){
-        repository.delete(file);
+    void delete(TaskInfo taskInfo){
+        repository.delete(taskInfo);
     }
 
     void pasueOrBegin(TaskInfo taskInfo) {
@@ -53,5 +52,9 @@ public class TaskViewModel extends AndroidViewModel {
 
     public void selectTask(TaskInfo taskInfo) {
         repository.selectTask(taskInfo) ;
+    }
+
+    public void move(int oldPosition, int targetPosition) {
+        repository.move(oldPosition,targetPosition) ;
     }
 }

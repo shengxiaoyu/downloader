@@ -27,4 +27,6 @@ public class Constant {
     public static final String PAUSE = "Pausing..." ;
 
     public static final String EMPTY = "No Task Info" ;
+
+    public static final int BLOCKQUEUE_INIT_VALUE = 11 ;
 }

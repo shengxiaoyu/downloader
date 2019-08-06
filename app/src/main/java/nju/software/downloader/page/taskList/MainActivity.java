@@ -3,6 +3,7 @@ package nju.software.downloader.page.taskList;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Canvas;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -83,20 +84,6 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    //新增任务activity保存时回调此函数
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        if (requestCode == NEW_DOWNLADER_TASK_ACTIVITY_REQUEST_CODE && resultCode == RESULT_OK) {
-            TaskInfo taskInfo = new TaskInfo(data.getStringExtra(AddTaskActivity.EXTRA_REPLY));
-            mTaskViewModel.insert(taskInfo);
-        } else {
-            Toast.makeText(
-                    getApplicationContext(),
-                    R.string.empty_not_saved,
-                    Toast.LENGTH_LONG).show();
-        }
-    }
 
     private void initListView(){
         //添加展示列表
@@ -115,7 +102,7 @@ public class MainActivity extends AppCompatActivity {
                 adapter.setFiles(taskInfos);
             }
         });
-        //左右滑动删除任务
+        //左右滑动删除任务和长按移动任务（实现任务插队）
         ItemTouchHelper helper = new ItemTouchHelper(
                 new ItemTouchHelper.Callback() {
                     @Override
@@ -127,8 +114,13 @@ public class MainActivity extends AppCompatActivity {
 
 
                     @Override
-                    public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
-                        return false;
+                    public boolean onMove(@NonNull RecyclerView recyclerView,
+                                          @NonNull RecyclerView.ViewHolder viewHolder,
+                                          @NonNull RecyclerView.ViewHolder target) {
+                        int oldPosition = viewHolder.getLayoutPosition() ;
+                        int targetPosition = target.getLayoutPosition() ;
+                        mTaskViewModel.move(oldPosition,targetPosition);
+                        return true;
                     }
 
                     @Override
@@ -144,10 +136,20 @@ public class MainActivity extends AppCompatActivity {
                     public float getSwipeThreshold(@NonNull RecyclerView.ViewHolder viewHolder) {
                         return 0.5f;
                     }
+
+                    @Override
+                    public void onChildDraw(@NonNull Canvas c, @NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
+                        if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE || actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
+                            float alpha = 1 - (Math.abs(dX) / recyclerView.getWidth());
+                            viewHolder.itemView.setAlpha(alpha);
+                        }
+                        super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
+                    }
                 }
         ) ;
         helper.attachToRecyclerView(recyclerView);
     }
+
     private void initFabAdd(){
         //新增下载任务
         FloatingActionButton fab = findViewById(R.id.fab);
@@ -159,6 +161,22 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+    //新增任务的逻辑处理
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == NEW_DOWNLADER_TASK_ACTIVITY_REQUEST_CODE && resultCode == RESULT_OK) {
+            TaskInfo taskInfo = new TaskInfo(data.getStringExtra(AddTaskActivity.EXTRA_REPLY));
+            mTaskViewModel.insert(taskInfo);
+        } else {
+            Toast.makeText(
+                    getApplicationContext(),
+                    R.string.empty_not_saved,
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+
+
     public void checkAndRequestPermissions(){
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)!= PackageManager.PERMISSION_GRANTED){
             //没有权限，则申请

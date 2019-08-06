@@ -1,7 +1,9 @@
 package nju.software.downloader.page.taskList;
 
 import android.content.Context;
+import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,6 +14,8 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.DragStartHelper;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.chip.Chip;
@@ -69,8 +73,22 @@ public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHo
             return mTaskInfos.size();
         else return 0;
     }
+
+    /**
+     * 根据位置获取任务
+     * @param position
+     * @return
+     */
+    public TaskInfo getTaskAtPosition(int position){
+        return mTaskInfos.get(position) ;
+    }
+
+
+
     //定义单个item如何展示
-    class TaskHolder extends RecyclerView.ViewHolder implements View.OnClickListener, View.OnLongClickListener {
+    class TaskHolder extends RecyclerView.ViewHolder implements View.OnClickListener
+//            , View.OnLongClickListener
+    {
         private final TextView fileNameView;
         private final TextView speedView ;
         private final ProgressBar progressBar ;
@@ -83,7 +101,7 @@ public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHo
             fileNameView = itemView.findViewById(R.id.filename_tv);
             selectView = itemView.findViewById(R.id.select_iv) ;
             itemView.setOnClickListener(this);
-            itemView.setOnLongClickListener(this);
+//            itemView.setOnLongClickListener(this);
         }
         //单个item如何展示
         void bind(final TaskInfo current){
@@ -131,22 +149,15 @@ public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHo
         }
 
         //长按：选中
-        @Override
-        public boolean onLongClick(View view) {
-            int layoutPosition = getLayoutPosition();
-            TaskInfo taskInfo = mTaskInfos.get(layoutPosition);
-            taskViewModel.selectTask(taskInfo) ;
-            Toast.makeText(context,"选中"+layoutPosition,Toast.LENGTH_SHORT).show();
-            return true;
-        }
+//        @Override
+//        public boolean onLongClick(View view) {
+//            int layoutPosition = getLayoutPosition();
+//            TaskInfo taskInfo = mTaskInfos.get(layoutPosition);
+//            taskViewModel.selectTask(taskInfo) ;
+//            Toast.makeText(context,"选中"+layoutPosition,Toast.LENGTH_SHORT).show();
+//            return true;
+//        }
+
     }
 
-    /**
-     * 根据位置获取任务
-     * @param position
-     * @return
-     */
-    public TaskInfo getTaskAtPosition(int position){
-        return mTaskInfos.get(position) ;
-    }
 }
