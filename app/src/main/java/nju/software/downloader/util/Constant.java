@@ -5,6 +5,8 @@ public class Constant {
     //增加下载任务 意图标识
     public static final int NEW_DOWNLADER_TASK_ACTIVITY_REQUEST_CODE = 1;
 
+    public static final int CONFIGUATION_INTENT_CODE = 2 ;
+
 //    public static String EXTERNAL_BASE_SAVE_PATH = "downloader" ;
 
 
@@ -12,7 +14,8 @@ public class Constant {
     public static final int PERMISSIONS_REQUEST_EXTERNAL_STORAGE = 1 ;
 
     //同时最大下载数
-    public static final int MAX_TASKS = 2 ;
+    public static volatile int MAX_TASKS = 2 ;
+    public static String MAX_TASKS_KEY = "number_of_max_tasks" ;
 
     public static final int TIMES_UPDATE_PROGRESS = 20 ;
 

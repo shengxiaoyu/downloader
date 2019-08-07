@@ -9,6 +9,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
 
 import nju.software.downloader.R;
 
@@ -31,14 +32,19 @@ public class AddTaskActivity extends AppCompatActivity {
                 Log.d(LOG_TAG,"获取下载url") ;
                 if (TextUtils.isEmpty(mEditWordView.getText())) {
                     setResult(RESULT_CANCELED, replyIntent);
+                    Toast.makeText(
+                            getApplicationContext(),
+                            R.string.empty_not_saved,
+                            Toast.LENGTH_LONG).show();
                 } else {
                     String word = mEditWordView.getText().toString();
                     replyIntent.putExtra(EXTRA_REPLY, word);
                     setResult(RESULT_OK, replyIntent);
                     Log.d(LOG_TAG,word) ;
+                    //这个activity结束，出栈
+                    finish();
                 }
-                //这个activity结束，出栈
-                finish();
+
             }
         });
     }

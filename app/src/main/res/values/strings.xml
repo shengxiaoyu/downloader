@@ -3,8 +3,12 @@
     <string name="action_settings">Settings</string>
     <string name="hint_word">Url...</string>
     <string name="button_save">DOWNLOAD</string>
-    <string name="empty_not_saved">URL is empty!</string>
+    <string name="empty_not_saved">Input is empty!</string>
     <string name="delete_selected">DeleteSelected</string>
     <string name="selected">To selected</string>
     <string name="placeholder">-</string>
+    <string name="configuation">Configuation</string>
+    <string name="update">Update</string>
+    <string name="max_connections_label">MaxConnections</string>
+    <string name="need_number">Please input a number(>1)</string>
 </resources>

@@ -12,7 +12,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.Future;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -21,7 +20,7 @@ import nju.software.downloader.model.TaskListLiveData;
 import nju.software.downloader.storage.dao.TaskDao;
 import nju.software.downloader.storage.repository.asyncTasks.DeleteSingleTask;
 import nju.software.downloader.storage.repository.asyncTasks.DownloadTask;
-import nju.software.downloader.storage.repository.asyncTasks.GetAllAsync;
+import nju.software.downloader.storage.repository.asyncTasks.GetAllTask;
 import nju.software.downloader.storage.room.TaskRoomDatabase;
 import nju.software.downloader.util.Constant;
 import nju.software.downloader.util.CustomerThreadPoolExecutor;
@@ -45,7 +44,7 @@ public class TaskRepository {
         taskDao = db.taskDao();
 
         //初始化taskList
-        new GetAllAsync(taskDao, taskListLiveData).execute();
+        new GetAllTask(taskDao, taskListLiveData).execute();
 
         threadPoolExecutor = new CustomerThreadPoolExecutor(Constant.MAX_TASKS,
                 Constant.MAX_TASKS,
@@ -62,6 +61,12 @@ public class TaskRepository {
     public void insert(TaskInfo taskInfo) {
         new addTask().execute(taskInfo) ;
     }
+
+    public void changeMaxTaskNumbers(int max_connection_number) {
+        Constant.MAX_TASKS = max_connection_number ;
+        threadPoolExecutor.setCorePoolSize(max_connection_number);
+    }
+
     public class addTask extends AsyncTask<TaskInfo, Void, DownloadTask> {
 
         @Override
@@ -125,8 +130,8 @@ public class TaskRepository {
     }
 
     //暂停，开始
-    public void pauseOrBegin(TaskInfo task) {
-
+    public void pauseOrBegin(int postiton) {
+        TaskInfo task = taskListLiveData.get(postiton);
         if (task.isFinished())
             return;
         DownloadTask downloadTask = task.getDownloadTask();
@@ -155,7 +160,8 @@ public class TaskRepository {
 
     }
 
-    public void selectTask(TaskInfo taskInfo) {
+    public void selectTask(int position) {
+        TaskInfo taskInfo = taskListLiveData.get(position);
         taskInfo.setSelected(!taskInfo.isSelected());
         taskListLiveData.updateValue(taskInfo);
     }

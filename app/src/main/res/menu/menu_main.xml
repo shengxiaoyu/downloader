@@ -4,7 +4,12 @@
     tools:context=".page.taskList.MainActivity">
     <item
         android:id="@+id/deleteSelected"
-        android:orderInCategory="100"
+        android:orderInCategory="10"
         android:title="@string/delete_selected"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/config"
+        android:orderInCategory="20"
+        android:title="@string/configuation"
+        app:showAsAction="never"/>
 </menu>

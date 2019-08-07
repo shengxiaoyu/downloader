@@ -2,6 +2,7 @@ package nju.software.downloader.page.taskList;
 
 import android.Manifest;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Canvas;
 import android.os.Bundle;
@@ -9,6 +10,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -30,7 +32,10 @@ import java.util.List;
 import nju.software.downloader.R;
 import nju.software.downloader.model.TaskInfo;
 import nju.software.downloader.page.addTask.AddTaskActivity;
+import nju.software.downloader.page.config.ConfigActivity;
+import nju.software.downloader.util.Constant;
 
+import static nju.software.downloader.util.Constant.CONFIGUATION_INTENT_CODE;
 import static nju.software.downloader.util.Constant.NEW_DOWNLADER_TASK_ACTIVITY_REQUEST_CODE;
 import static nju.software.downloader.util.Constant.PERMISSIONS_REQUEST_EXTERNAL_STORAGE;
 
@@ -40,10 +45,15 @@ public class MainActivity extends AppCompatActivity {
     private TaskViewModel mTaskViewModel;
     private static String LOG_TAG = MainActivity.class.getSimpleName() ;
 
+    private SharedPreferences mPreferences ;
+    private String sharedPrefFile = "nju.software.android.downloader" ;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
+        //初始化最大连接数
+        mPreferences = getSharedPreferences(sharedPrefFile,MODE_PRIVATE) ;
+        Constant.MAX_TASKS = mPreferences.getInt(Constant.MAX_TASKS_KEY,Constant.MAX_TASKS);
+
         setContentView(R.layout.activity_main);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -68,6 +78,7 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
+    //菜单栏操作
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
@@ -79,6 +90,10 @@ public class MainActivity extends AppCompatActivity {
             // Delete the existing data
             mTaskViewModel.multiDelete();
             return true;
+        }else if(id==R.id.config){
+            //配置页面
+            Intent intent = new Intent(MainActivity.this, ConfigActivity.class);
+            startActivityForResult(intent, CONFIGUATION_INTENT_CODE);
         }
 
         return super.onOptionsItemSelected(item);
@@ -148,6 +163,23 @@ public class MainActivity extends AppCompatActivity {
                 }
         ) ;
         helper.attachToRecyclerView(recyclerView);
+
+        //增加对item的单机和双击监听
+        ItemClickSupport.addTo(recyclerView)
+                .setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
+                    @Override
+                    public void onItemClicked(RecyclerView recyclerView, int position, View v) {
+                        /**
+                         * 暂停或继续
+                         */
+                        mTaskViewModel.pasueOrBegin(position);
+                    }
+
+                    @Override
+                    public void onItemDoubleClicked(RecyclerView recyclerView, int position, View v) {
+                        mTaskViewModel.selectTask(position) ;
+                    }
+                });
     }
 
     private void initFabAdd(){
@@ -168,11 +200,11 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == NEW_DOWNLADER_TASK_ACTIVITY_REQUEST_CODE && resultCode == RESULT_OK) {
             TaskInfo taskInfo = new TaskInfo(data.getStringExtra(AddTaskActivity.EXTRA_REPLY));
             mTaskViewModel.insert(taskInfo);
-        } else {
-            Toast.makeText(
-                    getApplicationContext(),
-                    R.string.empty_not_saved,
-                    Toast.LENGTH_LONG).show();
+        } else if(requestCode == CONFIGUATION_INTENT_CODE && resultCode == RESULT_OK) {
+            int max_connection_number = data.getIntExtra(ConfigActivity.EXTRA_REPLY,0);
+            if(max_connection_number!=0&&max_connection_number!=Constant.MAX_TASKS){
+                mTaskViewModel.changeMaxConnectionNumber(max_connection_number) ;
+            }
         }
     }
 
@@ -201,5 +233,19 @@ public class MainActivity extends AppCompatActivity {
 //                    finish();
                 }
         }
+    }
+
+//    @Override
+//    protected void onPause() {
+//        super.onPause();
+//
+//    }
+    //保存最大链接数
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        SharedPreferences.Editor edit = mPreferences.edit();
+        edit.putInt(Constant.MAX_TASKS_KEY,Constant.MAX_TASKS) ;
+        edit.apply();
     }
 }

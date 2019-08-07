@@ -216,6 +216,7 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
             //下载完成进度条一定位100，也为了避免不知道下载总长度的情况
 //            taskInfo.setProgress(100);
             taskInfo.setFinished(true);
+            taskInfo.setSpeed("");
             taskListLiveData.updateValue(taskInfo);
 
             //更新数据库

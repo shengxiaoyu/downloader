@@ -11,10 +11,10 @@ import nju.software.downloader.model.TaskInfo;
 import nju.software.downloader.model.TaskListLiveData;
 import nju.software.downloader.storage.dao.TaskDao;
 
-public class GetAllAsync extends AsyncTask<Void,Void,List<TaskInfo> > {
+public class GetAllTask extends AsyncTask<Void,Void,List<TaskInfo> > {
     private TaskDao taskDao ;
     private TaskListLiveData taskListLiveData ;
-    public GetAllAsync(TaskDao taskDao, TaskListLiveData taskListLiveData){
+    public GetAllTask(TaskDao taskDao, TaskListLiveData taskListLiveData){
         this.taskDao = taskDao ;
         this.taskListLiveData = taskListLiveData ;
     }

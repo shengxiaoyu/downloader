@@ -46,15 +46,19 @@ public class TaskViewModel extends AndroidViewModel {
         repository.delete(taskInfo);
     }
 
-    void pasueOrBegin(TaskInfo taskInfo) {
-        repository.pauseOrBegin(taskInfo) ;
+    void pasueOrBegin(int postiton) {
+        repository.pauseOrBegin(postiton) ;
     }
 
-    public void selectTask(TaskInfo taskInfo) {
+    public void selectTask(int taskInfo) {
         repository.selectTask(taskInfo) ;
     }
 
     public void move(int oldPosition, int targetPosition) {
         repository.move(oldPosition,targetPosition) ;
+    }
+
+    public void changeMaxConnectionNumber(int max_connection_number) {
+        repository.changeMaxTaskNumbers(max_connection_number) ;
     }
 }
