@@ -7,7 +7,6 @@ import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
 
 import java.io.Serializable;
-import java.util.concurrent.Future;
 
 import nju.software.downloader.storage.repository.asyncTasks.DownloadTask;
 import nju.software.downloader.util.Constant;
@@ -48,7 +47,7 @@ public class TaskInfo implements Serializable,Comparable<TaskInfo> {
 
     //下载速度
     @Ignore
-    private String speed = Constant.WAITTING;
+    private String speed = Constant.SPEED_OF_WAITTING;
 
     //是否暂停状态
     @Ignore

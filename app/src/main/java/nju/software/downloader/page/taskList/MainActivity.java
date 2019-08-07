@@ -1,16 +1,18 @@
 package nju.software.downloader.page.taskList;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Canvas;
+import android.net.ConnectivityManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -62,8 +64,10 @@ public class MainActivity extends AppCompatActivity {
         mTaskViewModel = ViewModelProviders.of(this).get(TaskViewModel.class);
 
         //初始化下载任务列表
-        initListView();
+        initRunningTaskList();
 
+        //初始化完成列表
+        initCommpleteTaskList() ;
         //初始化Fab-新增
         initFabAdd();
 
@@ -100,21 +104,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private void initListView(){
-        //添加展示列表
-        RecyclerView recyclerView = findViewById(R.id.recyclerview);
+    private void initRunningTaskList(){
+        //添加未完成任务列表
+        RecyclerView recyclerView = findViewById(R.id.unfinished_rv);
         final TaskListAdapter adapter = new TaskListAdapter(this,mTaskViewModel);
         recyclerView.setAdapter(adapter);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         //添加对fileList的观察，
-        mTaskViewModel.getAllFiles().observe(this, new Observer<List<TaskInfo>>() {
+        mTaskViewModel.getUnfinishedTasks().observe(this, new Observer<List<TaskInfo>>() {
 
             //当被观察数据更新时，调用这个方法
             @Override
             public void onChanged(@Nullable final List<TaskInfo> taskInfos) {
                 // Update the cached copy of the taskInfos in the adapter.
-                adapter.setFiles(taskInfos);
+                adapter.setTasks(taskInfos);
             }
         });
         //左右滑动删除任务和长按移动任务（实现任务插队）
@@ -145,7 +149,7 @@ public class MainActivity extends AppCompatActivity {
                         Toast.makeText(MainActivity.this, "Deleting " +
                                 taskAtPosition.getUrl(), Toast.LENGTH_LONG).show();
                         Log.d(LOG_TAG,"左右滑动删除!") ;
-                        mTaskViewModel.delete(taskAtPosition);
+                        mTaskViewModel.delete(taskAtPosition,Constant.UNFINISHED_FLAG);
                     }
                     @Override
                     public float getSwipeThreshold(@NonNull RecyclerView.ViewHolder viewHolder) {
@@ -177,11 +181,84 @@ public class MainActivity extends AppCompatActivity {
 
                     @Override
                     public void onItemDoubleClicked(RecyclerView recyclerView, int position, View v) {
-                        mTaskViewModel.selectTask(position) ;
+                        mTaskViewModel.selectTask(position,Constant.UNFINISHED_FLAG) ;
                     }
                 });
     }
 
+    private void initCommpleteTaskList(){
+        //添加未完成任务列表
+        RecyclerView recyclerView = findViewById(R.id.finished_rv);
+        final TaskListAdapter adapter = new TaskListAdapter(this,mTaskViewModel);
+        recyclerView.setAdapter(adapter);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+        //添加对fileList的观察，
+        mTaskViewModel.getFinishedTasks().observe(this, new Observer<List<TaskInfo>>() {
+
+            //当被观察数据更新时，调用这个方法
+            @Override
+            public void onChanged(@Nullable final List<TaskInfo> taskInfos) {
+                // Update the cached copy of the taskInfos in the adapter.
+                adapter.setTasks(taskInfos);
+            }
+        });
+        //左右滑动删除任务
+        ItemTouchHelper helper = new ItemTouchHelper(
+                new ItemTouchHelper.Callback() {
+                    @Override
+                    public int getMovementFlags(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
+                        int swipeFlags = ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT;
+                        return swipeFlags;
+                    }
+
+                    @Override
+                    public boolean onMove(@NonNull RecyclerView recyclerView,
+                                          @NonNull RecyclerView.ViewHolder viewHolder,
+                                          @NonNull RecyclerView.ViewHolder target) {
+                        return false;
+                    }
+
+                    @Override
+                    public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+                        int layoutPosition = viewHolder.getLayoutPosition();
+                        TaskInfo taskAtPosition = adapter.getTaskAtPosition(layoutPosition);
+                        Toast.makeText(MainActivity.this, "Deleting " +
+                                taskAtPosition.getUrl(), Toast.LENGTH_LONG).show();
+                        Log.d(LOG_TAG,"左右滑动删除!") ;
+                        mTaskViewModel.delete(taskAtPosition,Constant.FINISHED_FLAG);
+                    }
+                    @Override
+                    public float getSwipeThreshold(@NonNull RecyclerView.ViewHolder viewHolder) {
+                        return 0.5f;
+                    }
+
+                    @Override
+                    public void onChildDraw(@NonNull Canvas c, @NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
+                        if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE || actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
+                            float alpha = 1 - (Math.abs(dX) / recyclerView.getWidth());
+                            viewHolder.itemView.setAlpha(alpha);
+                        }
+                        super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
+                    }
+                }
+        ) ;
+        helper.attachToRecyclerView(recyclerView);
+
+        //增加对item的单机和双击监听
+        ItemClickSupport.addTo(recyclerView)
+                .setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
+                    @Override
+                    public void onItemClicked(RecyclerView recyclerView, int position, View v) {
+                        //完成任务不响应
+                    }
+
+                    @Override
+                    public void onItemDoubleClicked(RecyclerView recyclerView, int position, View v) {
+                        mTaskViewModel.selectTask(position,Constant.FINISHED_FLAG) ;
+                    }
+                });
+    }
     private void initFabAdd(){
         //新增下载任务
         FloatingActionButton fab = findViewById(R.id.fab);
@@ -193,7 +270,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-    //新增任务的逻辑处理
+    //新增任务和更新最大连接数的逻辑处理
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
@@ -220,6 +297,17 @@ public class MainActivity extends AppCompatActivity {
             }
             ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.READ_EXTERNAL_STORAGE,Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_EXTERNAL_STORAGE);
         }
+        if(!isNetworkConnected()){
+            Toast.makeText(this,"无网络连接",Toast.LENGTH_SHORT).show();
+        }
+    }
+    private boolean isNetworkConnected() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            return cm.getActiveNetwork() != null;
+        }else {
+            return cm.getActiveNetworkInfo()!=null ;
+        }
     }
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -230,22 +318,18 @@ public class MainActivity extends AppCompatActivity {
                     //获取到权限
                 }else {
                     Toast.makeText(this,"未授权，下载文件无法保存",Toast.LENGTH_SHORT).show();
-//                    finish();
+                    finish();
                 }
         }
     }
 
-//    @Override
-//    protected void onPause() {
-//        super.onPause();
-//
-//    }
     //保存最大链接数
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
+    protected void onPause() {
+        super.onPause();
         SharedPreferences.Editor edit = mPreferences.edit();
         edit.putInt(Constant.MAX_TASKS_KEY,Constant.MAX_TASKS) ;
         edit.apply();
     }
+
 }

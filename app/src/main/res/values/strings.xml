@@ -11,4 +11,6 @@
     <string name="update">Update</string>
     <string name="max_connections_label">MaxConnections</string>
     <string name="need_number">Please input a number(>1)</string>
+    <string name="downloading">Downloading</string>
+    <string name="complete">Complete</string>
 </resources>

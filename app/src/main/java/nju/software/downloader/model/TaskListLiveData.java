@@ -34,6 +34,9 @@ public class TaskListLiveData extends MutableLiveData<List<TaskInfo>> {
 
     public void delete(TaskInfo taskInfo){
         CopyOnWriteArrayList<TaskInfo> oldTasks = (CopyOnWriteArrayList)getValue();
+        if(oldTasks==null){
+            return;
+        }
         oldTasks.remove(taskInfo) ;
         postValue(oldTasks);
     }
@@ -71,5 +74,14 @@ public class TaskListLiveData extends MutableLiveData<List<TaskInfo>> {
             }
         }
     }
-//    public void put(int index,t)
+
+    public void multiDelete(List<TaskInfo> toStopTasks) {
+        CopyOnWriteArrayList<TaskInfo> oldTasks = (CopyOnWriteArrayList)getValue();
+        if(oldTasks!=null && oldTasks.size()!=0&&toStopTasks!=null&&toStopTasks.size()!=0){
+            for(TaskInfo taskInfo:toStopTasks){
+                oldTasks.remove(taskInfo) ;
+            }
+        }
+        postValue(oldTasks);
+    }
 }

@@ -23,8 +23,8 @@ public interface TaskDao {
     @Query("DELETE FROM TaskInfo_Table")
     void deleteAll() ;
 
-    //使用LiveData包装，已到达观察者自动观察更新的目的
-    @Query("SELECT * FROM TaskInfo_Table ORDER BY id ASC")
+    //使用LiveData包装，已到达观察者自动观察更新的目的,按优先级排好序
+    @Query("SELECT * FROM TaskInfo_Table ORDER BY priority,jumpTimeStamp ASC")
     List<TaskInfo> getAll() ;
 
     @Update

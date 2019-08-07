@@ -22,9 +22,15 @@ public class TaskViewModel extends AndroidViewModel {
         repository = new TaskRepository(application) ;
     }
 
-    LiveData<List<TaskInfo>> getAllFiles(){
-        return repository.getAllFiles() ;
+    LiveData<List<TaskInfo>> getUnfinishedTasks(){
+        return repository.getUnfinishedTasks() ;
     }
+
+    LiveData<List<TaskInfo>> getFinishedTasks(){
+        return repository.getFinishedTasks() ;
+    }
+
+
 
     void insert(TaskInfo taskInfo){
         Log.d("TaskViewModel","保存下载信息:"+ taskInfo.getUrl()) ;
@@ -32,26 +38,24 @@ public class TaskViewModel extends AndroidViewModel {
     }
 
     void multiDelete(){
-        List<TaskInfo> taskInfos = repository.getAllFiles().getValue() ;
-        if(taskInfos!=null){
-            for(TaskInfo taskInfo:taskInfos){
-                if(taskInfo.isSelected()){
-                    repository.delete(taskInfo);
-                }
-            }
-        }
+        repository.multiDelete() ;
     }
 
-    void delete(TaskInfo taskInfo){
-        repository.delete(taskInfo);
+    /**
+     *
+     * @param taskInfo
+     * @param taskFlag
+     */
+    void delete(TaskInfo taskInfo,int taskFlag){
+        repository.delete(taskInfo,taskFlag);
     }
 
     void pasueOrBegin(int postiton) {
         repository.pauseOrBegin(postiton) ;
     }
 
-    public void selectTask(int taskInfo) {
-        repository.selectTask(taskInfo) ;
+    public void selectTask(int taskInfo,int taskFlag) {
+        repository.selectTask(taskInfo,taskFlag) ;
     }
 
     public void move(int oldPosition, int targetPosition) {

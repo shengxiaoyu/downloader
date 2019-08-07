@@ -60,7 +60,7 @@ public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHo
     }
 
 
-    void setFiles(List<TaskInfo> taskInfos){
+    void setTasks(List<TaskInfo> taskInfos){
         mTaskInfos = taskInfos;
         notifyDataSetChanged();
     }

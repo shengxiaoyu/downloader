@@ -2,8 +2,6 @@ package nju.software.downloader.storage.repository.asyncTasks;
 
 import android.os.AsyncTask;
 
-import androidx.lifecycle.MutableLiveData;
-
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -11,15 +9,18 @@ import nju.software.downloader.model.TaskInfo;
 import nju.software.downloader.model.TaskListLiveData;
 import nju.software.downloader.storage.dao.TaskDao;
 import nju.software.downloader.storage.repository.TaskRepository;
+import nju.software.downloader.util.Constant;
 
 public class GetAllTask extends AsyncTask<Void,Void,List<TaskInfo> > {
     private TaskDao taskDao ;
-    private TaskListLiveData taskListLiveData ;
+    private TaskListLiveData unfinishedTaskListLiveData;
     private TaskRepository taskRepository ;
-    public GetAllTask(TaskRepository taskRepository, TaskDao taskDao, TaskListLiveData taskListLiveData){
+    private TaskListLiveData finishedTaskLiveData ;
+    public GetAllTask(TaskRepository taskRepository, TaskDao taskDao, TaskListLiveData unfinishedTaskListLiveData, TaskListLiveData finishedTaskLiveData){
         this.taskDao = taskDao ;
-        this.taskListLiveData = taskListLiveData ;
+        this.unfinishedTaskListLiveData = unfinishedTaskListLiveData ;
         this.taskRepository = taskRepository ;
+        this.finishedTaskLiveData = finishedTaskLiveData ;
     }
     @Override
     protected List<TaskInfo> doInBackground(Void... voids) {
@@ -29,9 +30,27 @@ public class GetAllTask extends AsyncTask<Void,Void,List<TaskInfo> > {
     @Override
     protected void onPostExecute(List<TaskInfo> taskInfos) {
         super.onPostExecute(taskInfos);
-        taskRepository.restartUnfinishedTask(taskInfos);
-        CopyOnWriteArrayList newCurrentList = new CopyOnWriteArrayList(taskInfos) ;
-        taskListLiveData.postValue(newCurrentList);
+        CopyOnWriteArrayList<TaskInfo> unfinishedTasks = new CopyOnWriteArrayList<>() ;
+        CopyOnWriteArrayList<TaskInfo> finishedTasks = new CopyOnWriteArrayList<>() ;
+
+        if(taskInfos!=null && taskInfos.size()>0){
+            for(TaskInfo taskInfo:taskInfos){
+                if(taskInfo.isFinished()){
+                    taskInfo.setSpeed(Constant.SPEED_OF_FINISHED);
+                    taskInfo.setProgress(100);
+                    finishedTasks.add(taskInfo) ;
+                }else{
+                    unfinishedTasks.add(taskInfo) ;
+                }
+            }
+        }
+
+        //重启未完成的任务
+        taskRepository.restartUnfinishedTask(unfinishedTasks);
+
+        //放入缓存数据
+        unfinishedTaskListLiveData.postValue(unfinishedTasks);
+        finishedTaskLiveData.postValue(finishedTasks);
     }
 
 }

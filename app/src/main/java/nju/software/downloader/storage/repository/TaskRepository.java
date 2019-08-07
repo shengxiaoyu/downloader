@@ -10,6 +10,7 @@ import androidx.lifecycle.LiveData;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -29,7 +30,8 @@ import nju.software.downloader.util.FileUtil;
 //封装数据的获取，可以从数据库，从网络
 public class TaskRepository {
     private TaskDao taskDao;
-    private volatile TaskListLiveData taskListLiveData = new TaskListLiveData();
+    private volatile TaskListLiveData unfinishedTaskListLiveData = new TaskListLiveData();
+    private volatile TaskListLiveData finishedTaskListLiveData = new TaskListLiveData() ;
     private static File saveDir;
     private static String LOG_TAG = TaskRepository.class.getSimpleName();
 
@@ -44,7 +46,7 @@ public class TaskRepository {
         taskDao = db.taskDao();
 
         //初始化taskList
-        new GetAllTask(this,taskDao, taskListLiveData).execute();
+        new GetAllTask(this,taskDao, unfinishedTaskListLiveData,finishedTaskListLiveData).execute();
 
         threadPoolExecutor = new CustomerThreadPoolExecutor(Constant.MAX_TASKS,
                 Constant.MAX_TASKS,
@@ -53,8 +55,12 @@ public class TaskRepository {
     }
 
     //LiveData room自动启动worker线程获取数据
-    public LiveData<List<TaskInfo>> getAllFiles() {
-        return taskListLiveData;
+    public LiveData<List<TaskInfo>> getUnfinishedTasks() {
+        return unfinishedTaskListLiveData;
+    }
+
+    public LiveData<List<TaskInfo>> getFinishedTasks(){
+        return finishedTaskListLiveData ;
     }
 
 
@@ -65,7 +71,7 @@ public class TaskRepository {
         }
         for(TaskInfo taskInfo:taskIList) {
             if(!taskInfo.isFinished()) {
-                threadPoolExecutor.execute(new DownloadTask(taskDao, saveDir, taskListLiveData, taskInfo));
+                threadPoolExecutor.execute(new DownloadTask(taskDao, saveDir, unfinishedTaskListLiveData, taskInfo,finishedTaskListLiveData));
             }
         }
     }
@@ -78,6 +84,37 @@ public class TaskRepository {
     public void changeMaxTaskNumbers(int max_connection_number) {
         Constant.MAX_TASKS = max_connection_number ;
         threadPoolExecutor.setCorePoolSize(max_connection_number);
+    }
+
+    public void multiDelete() {
+        List<TaskInfo> unfinishedTasks = unfinishedTaskListLiveData.getValue();
+        List<TaskInfo> toStopTasks = new ArrayList<>() ;
+        if(unfinishedTasks!=null && unfinishedTasks.size()!=0){
+            for(TaskInfo taskInfo:unfinishedTasks){
+                if (taskInfo.isSelected()){
+                    //先停止下载任务
+                    DownloadTask downloadTask = taskInfo.getDownloadTask();
+                    if (downloadTask != null) {
+                        //删除任务
+                        downloadTask.delete();
+                    }
+                    //释放引用
+                    taskInfo.setDownloadTask(null);
+                    toStopTasks.add(taskInfo) ;
+                }
+            }
+        }
+        //删除缓存，更新前端
+        unfinishedTaskListLiveData.multiDelete(toStopTasks) ;
+
+        List<TaskInfo> finishedTasks = finishedTaskListLiveData.getValue();
+        List<TaskInfo> toStopTasksOfFinished = new ArrayList<>() ;
+        for(TaskInfo taskInfo:finishedTasks){
+            if (taskInfo.isSelected()){
+                toStopTasksOfFinished.add(taskInfo) ;
+            }
+        }
+        finishedTaskListLiveData.multiDelete(toStopTasksOfFinished) ;
     }
 
     public class addTask extends AsyncTask<TaskInfo, Void, DownloadTask> {
@@ -103,8 +140,8 @@ public class TaskRepository {
                 //更新task并通知前端
                 long id = taskDao.insert(taskInfo);
                 taskInfo.setId(id);
-                DownloadTask downloadTask = new DownloadTask(taskDao, saveDir, taskListLiveData, taskInfo);
-                taskListLiveData.addValue(taskInfo);
+                DownloadTask downloadTask = new DownloadTask(taskDao, saveDir, unfinishedTaskListLiveData, taskInfo,finishedTaskListLiveData);
+                unfinishedTaskListLiveData.addValue(taskInfo);
 
                 return downloadTask ;
             } catch (MalformedURLException e) {
@@ -128,23 +165,30 @@ public class TaskRepository {
     }
 
     //删除单个
-    public void delete(TaskInfo task) {
-        //可以从waitting,running,pause,finish四个态转换到delete
-        DownloadTask downloadTask = task.getDownloadTask();
-        if(downloadTask!=null) {
-            //删除任务
-            downloadTask.delete();
-        }
-        //释放引用
-        task.setDownloadTask(null);
+    public void delete(TaskInfo task,int taskFlag) {
+        if(taskFlag==Constant.UNFINISHED_FLAG) {
+            //可以从waitting,running,pause,finish四个态转换到delete
+            DownloadTask downloadTask = task.getDownloadTask();
+            if (downloadTask != null) {
+                //删除任务
+                downloadTask.delete();
+            }
+            //释放引用
+            task.setDownloadTask(null);
 
-        //删除缓存数据、数据库内容、已下载文件
-        new DeleteSingleTask(taskListLiveData, taskDao, saveDir).execute(task);
+            //删除缓存数据、数据库内容、已下载文件
+            new DeleteSingleTask(taskDao, saveDir).execute(task);
+            unfinishedTaskListLiveData.delete(task);
+        }else {
+            //删除缓存数据、数据库内容、已下载文件
+            new DeleteSingleTask(taskDao, saveDir).execute(task);
+            finishedTaskListLiveData.delete(task);
+        }
     }
 
     //暂停，开始
     public void pauseOrBegin(int postiton) {
-        TaskInfo task = taskListLiveData.get(postiton);
+        TaskInfo task = unfinishedTaskListLiveData.get(postiton);
         if (task.isFinished())
             return;
         DownloadTask downloadTask = task.getDownloadTask();
@@ -154,29 +198,35 @@ public class TaskRepository {
              * 重新进入下载队列
              */
 
-            downloadTask = new DownloadTask(taskDao, saveDir, taskListLiveData, task);
+            downloadTask = new DownloadTask(taskDao, saveDir, unfinishedTaskListLiveData, task,finishedTaskListLiveData);
             threadPoolExecutor.execute(downloadTask);
 
             //更新缓存和前端数据
             task.setPaused(false);
-            task.setSpeed(Constant.WAITTING);
-            taskListLiveData.updateValue(task);
+            task.setSpeed(Constant.SPEED_OF_WAITTING);
+            unfinishedTaskListLiveData.updateValue(task);
         } else if(downloadTask.getStatus()==DownloadTask.WAITTING||downloadTask.getStatus()==DownloadTask.RUNNING){
             downloadTask.pause();
             //更新缓存内容
             task.setPaused(true);
-            task.setSpeed(Constant.PAUSE);
+            task.setSpeed(Constant.SPEED_OF_PAUSE);
 
             //提醒更新界面
-            taskListLiveData.updateValue(task);
+            unfinishedTaskListLiveData.updateValue(task);
         }
 
     }
 
-    public void selectTask(int position) {
-        TaskInfo taskInfo = taskListLiveData.get(position);
-        taskInfo.setSelected(!taskInfo.isSelected());
-        taskListLiveData.updateValue(taskInfo);
+    public void selectTask(int position,int taskFlag) {
+        if(taskFlag==Constant.UNFINISHED_FLAG){
+            TaskInfo taskInfo = unfinishedTaskListLiveData.get(position);
+            taskInfo.setSelected(!taskInfo.isSelected());
+            unfinishedTaskListLiveData.updateValue(taskInfo);
+        }else{
+            TaskInfo taskInfo = finishedTaskListLiveData.get(position);
+            taskInfo.setSelected(!taskInfo.isSelected());
+            finishedTaskListLiveData.updateValue(taskInfo);
+        }
     }
 
     /**
@@ -190,8 +240,8 @@ public class TaskRepository {
      */
     public void move(int oldPosition, int targetPosition) {
 
-        TaskInfo movingTask = taskListLiveData.get(oldPosition);
-        TaskInfo targetPositionTask = taskListLiveData.get(targetPosition) ;
+        TaskInfo movingTask = unfinishedTaskListLiveData.get(oldPosition);
+        TaskInfo targetPositionTask = unfinishedTaskListLiveData.get(targetPosition) ;
 
 
 
@@ -219,11 +269,11 @@ public class TaskRepository {
 
                 //先取消再入队
                 downloadTask.delete();
-                downloadTask = new DownloadTask(taskDao, saveDir, taskListLiveData, movingTask);
+                downloadTask = new DownloadTask(taskDao, saveDir, unfinishedTaskListLiveData, movingTask,finishedTaskListLiveData);
                 threadPoolExecutor.execute(downloadTask);
 
                 //然后看看有没有优先级低的在运行态
-                List<TaskInfo> subTasks = taskListLiveData.get(targetPosition, oldPosition);
+                List<TaskInfo> subTasks = unfinishedTaskListLiveData.get(targetPosition, oldPosition);
 
                 //从后往前遍历，看看如果有任务在执行，则停止，让出线程
                 TaskInfo backTask ;
@@ -236,9 +286,9 @@ public class TaskRepository {
                         backDownloadTask.delete();
 
                         //也要把人家放回去等待态
-                        backDownloadTask = new DownloadTask(taskDao, saveDir, taskListLiveData, backTask);
+                        backDownloadTask = new DownloadTask(taskDao, saveDir, unfinishedTaskListLiveData, backTask,finishedTaskListLiveData);
                         threadPoolExecutor.execute(backDownloadTask);
-                        taskListLiveData.updateValueNotPost(backTask);
+                        unfinishedTaskListLiveData.updateValueNotPost(backTask);
                         break;
                     }
                 }
@@ -263,7 +313,7 @@ public class TaskRepository {
             }else if(downloadTask.getStatus()==DownloadTask.RUNNING){
                 ///运行态
                 //遍历新位置之前的任务，如果有等待态的，则让出线程
-                List<TaskInfo> subList = taskListLiveData.get(oldPosition+1, targetPosition+1);
+                List<TaskInfo> subList = unfinishedTaskListLiveData.get(oldPosition+1, targetPosition+1);
                 //从高优先级的开始遍历
                 TaskInfo forwardTask ;
                 DownloadTask forwardDownloadTask ;
@@ -273,21 +323,21 @@ public class TaskRepository {
                     if(forwardDownloadTask.getStatus()==DownloadTask.WAITTING){
                         //让出线程
                         downloadTask.delete();
-                        downloadTask = new DownloadTask(taskDao,saveDir,taskListLiveData,movingTask) ;
+                        downloadTask = new DownloadTask(taskDao,saveDir, unfinishedTaskListLiveData,movingTask,finishedTaskListLiveData) ;
                         threadPoolExecutor.execute(downloadTask);
-                        taskListLiveData.updateValueNotPost(movingTask);
+                        unfinishedTaskListLiveData.updateValueNotPost(movingTask);
                         break;
                     }
                 }
             }else if(downloadTask.getStatus()==DownloadTask.WAITTING){
                 //等待态，重新入队
                 downloadTask.delete();
-                downloadTask = new DownloadTask(taskDao,saveDir,taskListLiveData,movingTask) ;
+                downloadTask = new DownloadTask(taskDao,saveDir, unfinishedTaskListLiveData,movingTask,finishedTaskListLiveData) ;
                 threadPoolExecutor.execute(downloadTask);
             }
         }
         //更新缓存数据，以更新前端
-        taskListLiveData.move(oldPosition,targetPosition) ;
+        unfinishedTaskListLiveData.move(oldPosition,targetPosition) ;
     }
 
 

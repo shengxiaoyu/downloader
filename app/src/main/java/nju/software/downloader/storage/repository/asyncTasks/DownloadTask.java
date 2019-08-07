@@ -19,7 +19,8 @@ import nju.software.downloader.storage.dao.TaskDao;
 import nju.software.downloader.util.Constant;
 
 public class DownloadTask implements Runnable,Comparable<DownloadTask>{
-    private TaskListLiveData taskListLiveData ;
+    private TaskListLiveData unfinishedTaskListLiveData;
+    private TaskListLiveData finishedTaskListLiveData ;
     private TaskDao taskDao;
     private File saveDir ;
     private TaskInfo taskInfo ;
@@ -35,15 +36,16 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
     public static final int FINISHED = 3 ;
     public static final int DELETE = 4 ;
 
-    public DownloadTask(TaskDao taskDao, File saveDir, TaskListLiveData taskListLiveData,TaskInfo taskInfo) {
-        this.taskListLiveData = taskListLiveData ;
+    public DownloadTask(TaskDao taskDao, File saveDir, TaskListLiveData unfinishedTaskListLiveData, TaskInfo taskInfo,TaskListLiveData finishedTaskListLiveData) {
+        this.unfinishedTaskListLiveData = unfinishedTaskListLiveData;
         this.taskDao = taskDao;
         this.saveDir = saveDir ;
+        this.finishedTaskListLiveData = finishedTaskListLiveData ;
 
         //相互引用
         this.taskInfo = taskInfo ;
         taskInfo.setDownloadTask(this);
-        taskInfo.setSpeed(Constant.WAITTING);
+        taskInfo.setSpeed(Constant.SPEED_OF_WAITTING);
         //初始为waitting态
         status = WAITTING ;
     }
@@ -105,7 +107,7 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
                 // allow canceling
                 if (Thread.currentThread().isInterrupted()) {
                     this.status = 2 ;
-                    taskInfo.setSpeed(Constant.PAUSE);
+                    taskInfo.setSpeed(Constant.SPEED_OF_PAUSE);
                     taskDao.update(taskInfo);
                     return;
                 }
@@ -117,13 +119,13 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
                     total += num;
                     taskInfo.setProgress((int) (total * 100 / fileLength));
                     num = 0;
-                    taskListLiveData.updateValue(taskInfo);
+                    unfinishedTaskListLiveData.updateValue(taskInfo);
                 }
             }
             //下载完成进度条一定位100，也为了避免不知道下载总长度的情况
             taskInfo.setProgress(100);
             taskInfo.setFinished(true);
-            taskListLiveData.updateValue(taskInfo);
+            unfinishedTaskListLiveData.updateValue(taskInfo);
 
             //更新数据库
             taskDao.update(taskInfo);
@@ -186,14 +188,15 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
                     return ;
                 }
                 num += count ;
+                //在这里更新总量，避免最后一次不进入下面的if
+                total += count ;
                 output.write(data, 0, count);
                 // 更新进度条,暂不更新数据库，等退出或者结束的时候一起更新,这样虽然可能导致进度条和真是下载长度不一致，但问题不大
                 if (fileLength > 0 && num>fileLength/ Constant.TIMES_UPDATE_PROGRESS) { // only if total length is known
                     endTime = System.currentTimeMillis() ;
-                    total += num ;
                     long speed = 0 ;
                     if(endTime!=beginTime){
-                        speed = num/((endTime-beginTime)/1000) ;
+                        speed = num/(1+(endTime-beginTime)/1000) ;
                     }
                     if(speed>Constant.GB){
                         taskInfo.setSpeed(speed/Constant.GB+"GB/s");
@@ -210,7 +213,7 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
                     }
                     taskInfo.setProgress((int) (total * 100 / fileLength));
                     num = 0;
-                    taskListLiveData.updateValue(taskInfo);
+                    unfinishedTaskListLiveData.updateValue(taskInfo);
 
                     beginTime = System.currentTimeMillis() ;
                 }
@@ -218,9 +221,9 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
             //下载完成进度条一定位100，也为了避免不知道下载总长度的情况
             taskInfo.setProgress((int) (total * 100 / fileLength));
             taskInfo.setFinished(true);
-            taskInfo.setSpeed("");
-            taskListLiveData.updateValue(taskInfo);
-
+            taskInfo.setSpeed(Constant.SPEED_OF_FINISHED);
+            unfinishedTaskListLiveData.delete(taskInfo);
+            finishedTaskListLiveData.addValue(taskInfo);
             //更新数据库
             taskDao.update(taskInfo);
         } catch (MalformedURLException e1) {
@@ -285,9 +288,6 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
         status = DownloadTask.PAUSE;
     }
 
-    public Thread getRunningThread() {
-        return runningThread;
-    }
 
     public void setRunningThread(Thread runningThread) {
         this.runningThread = runningThread;
