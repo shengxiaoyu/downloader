@@ -81,11 +81,11 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
             }
             Log.d(LOG_TAG, "网络连接成功");
 
-            // this will be useful to display download percentage
+            // this will be useful to  display download percentage
             // might be -1: server did not report the length
             int fileLength = connection.getContentLength();
             long beginPosition = saveFile.length();
-            connection.setRequestProperty("Range", "bytes=" + beginPosition + "-" + fileLength);
+            connection.setRequestProperty("Range", "bytes=" + beginPosition + "-");
 
             try {
                 input = connection.getInputStream();

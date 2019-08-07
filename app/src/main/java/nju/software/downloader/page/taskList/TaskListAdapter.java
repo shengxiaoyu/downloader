@@ -87,7 +87,6 @@ public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHo
 
     //定义单个item如何展示
     class TaskHolder extends RecyclerView.ViewHolder
-//            implements View.OnClickListener
     {
         private final TextView fileNameView;
         private final TextView speedView ;
@@ -100,7 +99,6 @@ public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHo
             speedView = itemView.findViewById(R.id.speed_tv) ;
             fileNameView = itemView.findViewById(R.id.filename_tv);
             selectView = itemView.findViewById(R.id.select_iv) ;
-//            itemView.setOnClickListener(this);
         }
         //单个item如何展示
         void bind(final TaskInfo current){
@@ -133,30 +131,6 @@ public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHo
             speedView.setText(current.getSpeed());
             selectView.setVisibility(current.isSelected()?View.VISIBLE:View.GONE);
         }
-
-        //单击：暂停、开始
-//        @Override
-//        public void onClick(View view) {
-//            int layoutPosition = getLayoutPosition();
-//            TaskInfo taskInfo = mTaskInfos.get(layoutPosition);
-//            /**
-//             * 暂停或继续
-//             */
-//            if(!taskInfo.isFinished()) {
-//                taskViewModel.pasueOrBegin(taskInfo);
-//            }
-//        }
-
-        //长按：选中
-//        @Override
-//        public boolean onLongClick(View view) {
-//            int layoutPosition = getLayoutPosition();
-//            TaskInfo taskInfo = mTaskInfos.get(layoutPosition);
-//            taskViewModel.selectTask(taskInfo) ;
-//            Toast.makeText(context,"选中"+layoutPosition,Toast.LENGTH_SHORT).show();
-//            return true;
-//        }
-
     }
 
 }

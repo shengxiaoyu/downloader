@@ -143,6 +143,11 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     @Override
+                    public boolean canDropOver(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder current, @NonNull RecyclerView.ViewHolder target) {
+                        return super.canDropOver(recyclerView, current, target);
+                    }
+
+                    @Override
                     public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
                         int layoutPosition = viewHolder.getLayoutPosition();
                         TaskInfo taskAtPosition = adapter.getTaskAtPosition(layoutPosition);
@@ -167,7 +172,7 @@ public class MainActivity extends AppCompatActivity {
                 }
         ) ;
         helper.attachToRecyclerView(recyclerView);
-
+//        getApplicationContext()
         //增加对item的单机和双击监听
         ItemClickSupport.addTo(recyclerView)
                 .setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
@@ -209,7 +214,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public int getMovementFlags(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
                         int swipeFlags = ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT;
-                        return swipeFlags;
+                        return makeMovementFlags(0,swipeFlags);
                     }
 
                     @Override
