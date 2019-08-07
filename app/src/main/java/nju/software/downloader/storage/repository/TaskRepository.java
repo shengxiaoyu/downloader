@@ -44,7 +44,7 @@ public class TaskRepository {
         taskDao = db.taskDao();
 
         //初始化taskList
-        new GetAllTask(taskDao, taskListLiveData).execute();
+        new GetAllTask(this,taskDao, taskListLiveData).execute();
 
         threadPoolExecutor = new CustomerThreadPoolExecutor(Constant.MAX_TASKS,
                 Constant.MAX_TASKS,
@@ -55,6 +55,19 @@ public class TaskRepository {
     //LiveData room自动启动worker线程获取数据
     public LiveData<List<TaskInfo>> getAllFiles() {
         return taskListLiveData;
+    }
+
+
+    //重启未完成任务
+    public void restartUnfinishedTask(List<TaskInfo> taskIList){
+        if(taskIList==null||taskIList.size()==0){
+            return;
+        }
+        for(TaskInfo taskInfo:taskIList) {
+            if(!taskInfo.isFinished()) {
+                threadPoolExecutor.execute(new DownloadTask(taskDao, saveDir, taskListLiveData, taskInfo));
+            }
+        }
     }
 
     //插入任务，使用异步线程

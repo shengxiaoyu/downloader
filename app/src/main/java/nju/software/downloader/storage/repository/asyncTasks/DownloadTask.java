@@ -193,7 +193,7 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
                     total += num ;
                     long speed = 0 ;
                     if(endTime!=beginTime){
-                        speed = num/(endTime-beginTime)/1000 ;
+                        speed = num/((endTime-beginTime)/1000) ;
                     }
                     if(speed>Constant.GB){
                         taskInfo.setSpeed(speed/Constant.GB+"GB/s");
@@ -211,10 +211,12 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
                     taskInfo.setProgress((int) (total * 100 / fileLength));
                     num = 0;
                     taskListLiveData.updateValue(taskInfo);
+
+                    beginTime = System.currentTimeMillis() ;
                 }
             }
             //下载完成进度条一定位100，也为了避免不知道下载总长度的情况
-//            taskInfo.setProgress(100);
+            taskInfo.setProgress((int) (total * 100 / fileLength));
             taskInfo.setFinished(true);
             taskInfo.setSpeed("");
             taskListLiveData.updateValue(taskInfo);
