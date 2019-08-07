@@ -103,6 +103,8 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
             long total = beginPosition;
             //单个循环下载量
             int count;
+            long beginTime = System.currentTimeMillis() ;
+            long endTime = beginTime ;
             while ((count = input.read(data)) != -1) {
                 // allow canceling
                 if (Thread.currentThread().isInterrupted()) {
@@ -115,11 +117,30 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
                 rwd.write(data, 0, count);
 
                 // 更新进度条,暂不更新数据库，等退出或者结束的时候一起更新,这样虽然可能导致进度条和真是下载长度不一致，但问题不大
-                if (fileLength > 0 && num > fileLength / 20) { // only if total length is known
-                    total += num;
+                if (fileLength > 0 && num>fileLength/ Constant.TIMES_UPDATE_PROGRESS) { // only if total length is known
+                    endTime = System.currentTimeMillis() ;
+                    long speed = 0 ;
+                    if(endTime!=beginTime){
+                        speed = num/(1+(endTime-beginTime)/1000) ;
+                    }
+                    if(speed>Constant.GB){
+                        taskInfo.setSpeed(speed/Constant.GB+"GB/s");
+                    }else if(speed>Constant.MB){
+                        taskInfo.setSpeed(speed/Constant.MB+"MB/s");
+                    }else if(speed>Constant.KB){
+                        taskInfo.setSpeed(speed/Constant.KB+"KB/s");
+                    }else {
+                        if(speed==0){
+                            taskInfo.setSpeed("- B/s");
+                        }else {
+                            taskInfo.setSpeed(speed + "B/s");
+                        }
+                    }
                     taskInfo.setProgress((int) (total * 100 / fileLength));
                     num = 0;
                     unfinishedTaskListLiveData.updateValue(taskInfo);
+
+                    beginTime = System.currentTimeMillis() ;
                 }
             }
             //下载完成进度条一定位100，也为了避免不知道下载总长度的情况
