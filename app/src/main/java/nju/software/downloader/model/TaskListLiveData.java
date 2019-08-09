@@ -11,10 +11,10 @@ public class TaskListLiveData extends MutableLiveData<List<TaskInfo>> {
         for(TaskInfo theTask:oldTasks){
             if(theTask.getId()==taskInfo.getId()){
                 theTask.updateByAnotherOne(theTask);
+                postValue(oldTasks);
                 break;
             }
         }
-        postValue(oldTasks);
     }
     public void addValue(TaskInfo taskInfo){
         CopyOnWriteArrayList<TaskInfo> oldTasks = (CopyOnWriteArrayList)getValue();

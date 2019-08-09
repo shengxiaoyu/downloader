@@ -94,11 +94,11 @@ public class TaskDao {
         return taskInfos ;
     }
 
-    public void delete(long id){
+    public boolean delete(long id){
         String selection = TaskContract.TaskEntry._ID +" =? " ;
         String[] selectionArgs = {id+""} ;
 
-        dbWriter.delete(TaskContract.TaskEntry.TABLE_NAME,selection,selectionArgs) ;
+        return dbWriter.delete(TaskContract.TaskEntry.TABLE_NAME,selection,selectionArgs)==1 ;
     }
     public void deleteTasks(long[] ids){
         String selection = TaskContract.TaskEntry._ID +" in ( "+ TextUtils.join(",", Collections.singleton(ids)) +")";

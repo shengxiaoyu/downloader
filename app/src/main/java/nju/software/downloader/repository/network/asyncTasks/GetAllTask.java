@@ -1,4 +1,4 @@
-package nju.software.downloader.repository.repository.asyncTasks;
+package nju.software.downloader.repository.network.asyncTasks;
 
 import android.os.AsyncTask;
 
@@ -8,7 +8,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import nju.software.downloader.model.TaskInfo;
 import nju.software.downloader.model.TaskListLiveData;
 import nju.software.downloader.repository.database.TaskDao;
-import nju.software.downloader.repository.repository.TaskRepository;
+import nju.software.downloader.repository.TaskRepository;
 import nju.software.downloader.util.Constant;
 
 public class GetAllTask extends AsyncTask<Void,Void,List<TaskInfo> > {

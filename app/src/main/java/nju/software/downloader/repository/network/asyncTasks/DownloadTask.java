@@ -1,4 +1,4 @@
-package nju.software.downloader.repository.repository.asyncTasks;
+package nju.software.downloader.repository.network.asyncTasks;
 
 import android.util.Log;
 
@@ -15,18 +15,17 @@ import java.net.URL;
 
 import nju.software.downloader.model.TaskInfo;
 import nju.software.downloader.model.TaskListLiveData;
-import nju.software.downloader.repository.database.TaskDao;
+import nju.software.downloader.repository.database.DBTaskManager;
 import nju.software.downloader.util.Constant;
 
 public class DownloadTask implements Runnable,Comparable<DownloadTask>{
     private TaskListLiveData unfinishedTaskListLiveData;
     private TaskListLiveData finishedTaskListLiveData ;
-    private TaskDao taskDao;
+    private DBTaskManager dbTaskManager ;
     private File saveDir ;
     private TaskInfo taskInfo ;
-    private static final String LOG_TAG = DownloadTask.class.getSimpleName() ;
-    private Thread runningThread ;
-    //运行状态0标识等待，1标识执行，2标识暂停，3标识取消，4标识完成
+
+    //运行状态0标识等待，1标识执行，2标识暂停，3标识取消，4标识完成，状态要和taskInfo保持一致，自己不可以变
     private volatile int status ;
 
     //任务总共五个状态
@@ -34,28 +33,35 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
     public static final int RUNNING = 1 ;
     public static final int PAUSE = 2 ;
     public static final int FINISHED = 3 ;
-    public static final int DELETE = 4 ;
+    public static final int CANCEL = 4 ;
 
-    public DownloadTask(TaskDao taskDao, File saveDir, TaskListLiveData unfinishedTaskListLiveData, TaskInfo taskInfo,TaskListLiveData finishedTaskListLiveData) {
-        this.unfinishedTaskListLiveData = unfinishedTaskListLiveData;
-        this.taskDao = taskDao;
+
+    private static final String LOG_TAG = DownloadTask.class.getSimpleName() ;
+
+    public DownloadTask(DBTaskManager dbTaskManager, File saveDir, TaskInfo taskInfo, TaskListLiveData unfinishedTaskListLiveData, TaskListLiveData finishedTaskListLiveData) {
+        this.dbTaskManager = dbTaskManager ;
         this.saveDir = saveDir ;
+
+        this.unfinishedTaskListLiveData = unfinishedTaskListLiveData;
         this.finishedTaskListLiveData = finishedTaskListLiveData ;
 
         //相互引用
         this.taskInfo = taskInfo ;
         taskInfo.setDownloadTask(this);
-        taskInfo.setSpeed(Constant.SPEED_OF_WAITTING);
-        //初始为waitting态
+
+        //初始为waitting态,
         status = WAITTING ;
     }
 
     @Override
     public void run() {
+        //只能从WAIRTTING状态进入
+        if(status!=WAITTING){
+            return;
+        }
         File saveFile = new File(saveDir,taskInfo.getFileName()) ;
         HttpURLConnection connection = null;
         InputStream input = null;
-
         RandomAccessFile rwd = null ;
         OutputStream output = null;
         try {
@@ -66,7 +72,6 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
             long beginPosition = saveFile.length();
             //是否断点续传
             boolean isResume=false ;
-
 
             if(beginPosition>0){
                 try {
@@ -109,8 +114,7 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
             //进度更新量
             int changeProgress;
             while ((count = input.read(data)) != -1) {
-                if (Thread.currentThread().isInterrupted()) {
-                    taskDao.update(taskInfo);
+                if (status!=RUNNING) {
                     return ;
                 }
                 // allow canceling
@@ -149,8 +153,7 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
 
 
                     //更新前再检查一遍
-                    if (Thread.currentThread().isInterrupted()) {
-                        taskDao.update(taskInfo);
+                    if (status!=RUNNING) {
                         return ;
                     }
                     unfinishedTaskListLiveData.updateValue(taskInfo) ;
@@ -164,7 +167,7 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
             unfinishedTaskListLiveData.delete(taskInfo);
             finishedTaskListLiveData.addValue(taskInfo);
             //更新数据库
-            taskDao.update(taskInfo);
+            dbTaskManager.update(taskInfo);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (MalformedURLException e) {
@@ -187,6 +190,11 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
         }
 
     }
+
+    public void setTaskInfo(TaskInfo taskInfo) {
+        this.taskInfo = taskInfo;
+    }
+
     @Override
     public int compareTo(DownloadTask downloadTask) {
         return taskInfo.compareTo(downloadTask.taskInfo);
@@ -214,7 +222,7 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
         return status;
     }
 
-    public void setStatus(int status) {
+    void setStatus(int status) {
         this.status = status;
     }
 
@@ -222,36 +230,21 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
      * 取消线程池中的任务
      */
     public void pause() {
-        if(runningThread!=null){
-            runningThread.interrupt();
-        }
-        //释放引用
-//        taskInfo.setDownloadTask(null);
-//        runningThread = null ;
         status = DownloadTask.PAUSE;
     }
 
 
-    public void setRunningThread(Thread runningThread) {
-        this.runningThread = runningThread;
-    }
 
-    public void delete() {
-        if(runningThread!=null){
-            runningThread.interrupt();
+    public void cancel() {
+        status = DownloadTask.CANCEL;
+
+        //删除已下载文件
+        File saveFile = new File(saveDir,taskInfo.getFileName()) ;
+        if(saveFile.exists()){
+            saveFile.delete() ;
         }
-        //释放引用
-        runningThread = null ;
-//        taskInfo.setDownloadTask(null);
-//        taskInfo = null ;
-        status = DownloadTask.DELETE;
     }
     public void waittting(){
-        if(runningThread!=null){
-            runningThread.interrupt();
-        }
-        //释放引用
-//        runningThread = null ;
         status = DownloadTask.WAITTING;
         taskInfo.setSpeed(Constant.SPEED_OF_WAITTING);
         unfinishedTaskListLiveData.updateValue(this.taskInfo);

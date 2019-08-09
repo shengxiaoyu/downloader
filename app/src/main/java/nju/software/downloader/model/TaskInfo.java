@@ -8,7 +8,7 @@ import androidx.room.PrimaryKey;
 
 import java.io.Serializable;
 
-import nju.software.downloader.repository.repository.asyncTasks.DownloadTask;
+import nju.software.downloader.repository.network.asyncTasks.DownloadTask;
 import nju.software.downloader.util.Constant;
 
 
@@ -221,4 +221,11 @@ public class TaskInfo implements Serializable,Comparable<TaskInfo> {
         }
     }
 
+    public void cancel() {
+        if(downloadTask!=null){
+            downloadTask.setTaskInfo(null);
+            downloadTask = null ;
+        }
+
+    }
 }

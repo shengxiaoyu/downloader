@@ -1,4 +1,4 @@
-package nju.software.downloader.repository.repository.asyncTasks;
+package nju.software.downloader.repository.network.asyncTasks;
 
 import android.os.AsyncTask;
 
@@ -10,7 +10,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 public class CustomerThreadPoolExecutor extends ThreadPoolExecutor {
-
+    //未完成任务，又维护了两个队列，分别对应正在进行和已经完成。与线程池同步
     private PriorityBlockingQueue<DownloadTask> waittingQueue  ;
     private PriorityBlockingQueue<DownloadTask> runningQueue ;
     private volatile boolean isTransfering ;
@@ -21,19 +21,19 @@ public class CustomerThreadPoolExecutor extends ThreadPoolExecutor {
     }
 
     @Override
+    public void execute(Runnable command) {
+        if(command instanceof DownloadTask) {
+            waittingQueue.add((DownloadTask) command);
+        }
+        super.execute(command);
+    }
+    @Override
     protected void beforeExecute(Thread t, Runnable r) {
         if(r instanceof DownloadTask){
-            //开始前，检查任务状态，任务可能已经取消了，或者删除了
+            //将任务加入从等待队列加入运行队列
             DownloadTask downloadTask = ((DownloadTask)r);
-            if(downloadTask.getStatus()!=DownloadTask.WAITTING){
-                //任务只能从waitting状态进入running态，如果是delete,pause都直接中断退出
-                Thread.currentThread().interrupt();
-            }else {
-                downloadTask.setRunningThread(Thread.currentThread());
-                downloadTask.setStatus(DownloadTask.RUNNING);
-                waittingQueue.remove(downloadTask) ;
-                runningQueue.add(downloadTask) ;
-            }
+            waittingQueue.remove(downloadTask) ;
+            runningQueue.add(downloadTask) ;
         }
         super.beforeExecute(t, r);
     }
@@ -50,7 +50,6 @@ public class CustomerThreadPoolExecutor extends ThreadPoolExecutor {
                     return ;
                 }
             }
-
             if(downloadTask.getStatus()==DownloadTask.RUNNING){
                 //只能从RUNNING态进入
                 downloadTask.setRunningThread(null);
@@ -60,12 +59,21 @@ public class CustomerThreadPoolExecutor extends ThreadPoolExecutor {
         }
     }
 
+
+
     @Override
-    public void execute(Runnable command) {
-        if(command instanceof DownloadTask) {
-            waittingQueue.add((DownloadTask) command);
+    public boolean remove(Runnable task) {
+        if(task instanceof DownloadTask) {
+            DownloadTask downloadTask = (DownloadTask)task ;
+            if(super.remove(task)&&waittingQueue.remove(downloadTask)){
+                //成功从阻塞队列删除
+            }else{
+                //如果在等待队列没有删除成功，则说明在运行队列
+                runningQueue.remove(downloadTask) ;
+                downloadTask.cancel();
+            }
         }
-        super.execute(command);
+        return true ;
     }
 
     public void cutting(){
@@ -96,7 +104,7 @@ public class CustomerThreadPoolExecutor extends ThreadPoolExecutor {
                     ArrayList<DownloadTask> tmpWaittingQueue = new ArrayList<>(activeCount-corePoolSize) ;
                     while (iterator.hasNext()) {
                         DownloadTask next = iterator.next();
-                        next.waittting();
+                        next.
 
                         //进入临时队列等待，这时候不能直接进入线程池的阻塞队列
                         tmpWaittingQueue.add(next) ;
@@ -112,7 +120,6 @@ public class CustomerThreadPoolExecutor extends ThreadPoolExecutor {
                     //回收结束，重新入队
                     for(DownloadTask downloadTask:tmpWaittingQueue){
                         ThreadPoolExecutors[0].execute(downloadTask);
-
                     }
 
                     //结束转移

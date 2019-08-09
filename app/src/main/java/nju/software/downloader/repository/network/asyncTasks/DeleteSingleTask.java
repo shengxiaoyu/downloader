@@ -1,4 +1,4 @@
-package nju.software.downloader.repository.repository.asyncTasks;
+package nju.software.downloader.repository.network.asyncTasks;
 
 import android.os.AsyncTask;
 
