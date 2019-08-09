@@ -5,11 +5,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.graphics.Canvas;
 import android.net.ConnectivityManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -23,7 +21,6 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
-import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -107,7 +104,7 @@ public class MainActivity extends AppCompatActivity {
     private void initRunningTaskList(){
         //添加未完成任务列表
         RecyclerView recyclerView = findViewById(R.id.unfinished_rv);
-        final TaskListAdapter adapter = new TaskListAdapter(this,mTaskViewModel);
+        final TaskListAdapter adapter = new TaskListAdapter(this,mTaskViewModel,Constant.UNFINISHED_FLAG);
         recyclerView.setAdapter(adapter);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
@@ -121,80 +118,12 @@ public class MainActivity extends AppCompatActivity {
                 adapter.setTasks(taskInfos);
             }
         });
-        //左右滑动删除任务和长按移动任务（实现任务插队）
-        ItemTouchHelper helper = new ItemTouchHelper(
-                new ItemTouchHelper.Callback() {
-                    @Override
-                    public int getMovementFlags(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
-                        int dragFlags = ItemTouchHelper.UP | ItemTouchHelper.DOWN;
-                        int swipeFlags = ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT;
-                        return makeMovementFlags(dragFlags, swipeFlags);
-                    }
-
-
-                    @Override
-                    public boolean onMove(@NonNull RecyclerView recyclerView,
-                                          @NonNull RecyclerView.ViewHolder viewHolder,
-                                          @NonNull RecyclerView.ViewHolder target) {
-                        int oldPosition = viewHolder.getLayoutPosition() ;
-                        int targetPosition = target.getLayoutPosition() ;
-                        mTaskViewModel.move(oldPosition,targetPosition);
-                        return true;
-                    }
-
-                    @Override
-                    public boolean canDropOver(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder current, @NonNull RecyclerView.ViewHolder target) {
-                        return super.canDropOver(recyclerView, current, target);
-                    }
-
-                    @Override
-                    public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
-                        int layoutPosition = viewHolder.getLayoutPosition();
-                        TaskInfo taskAtPosition = adapter.getTaskAtPosition(layoutPosition);
-                        Toast.makeText(MainActivity.this, "Deleting " +
-                                taskAtPosition.getUrl(), Toast.LENGTH_LONG).show();
-                        Log.d(LOG_TAG,"左右滑动删除!") ;
-                        mTaskViewModel.delete(taskAtPosition,Constant.UNFINISHED_FLAG);
-                    }
-                    @Override
-                    public float getSwipeThreshold(@NonNull RecyclerView.ViewHolder viewHolder) {
-                        return 0.5f;
-                    }
-
-                    @Override
-                    public void onChildDraw(@NonNull Canvas c, @NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
-                        if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE || actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
-                            float alpha = 1 - (Math.abs(dX) / recyclerView.getWidth());
-                            viewHolder.itemView.setAlpha(alpha);
-                        }
-                        super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
-                    }
-                }
-        ) ;
-        helper.attachToRecyclerView(recyclerView);
-//        getApplicationContext()
-        //增加对item的单机和双击监听
-        ItemClickSupport.addTo(recyclerView)
-                .setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
-                    @Override
-                    public void onItemClicked(RecyclerView recyclerView, int position, View v) {
-                        /**
-                         * 暂停或继续
-                         */
-                        mTaskViewModel.pasueOrBegin(position);
-                    }
-
-                    @Override
-                    public void onItemDoubleClicked(RecyclerView recyclerView, int position, View v) {
-                        mTaskViewModel.selectTask(position,Constant.UNFINISHED_FLAG) ;
-                    }
-                });
     }
 
     private void initCommpleteTaskList(){
         //添加未完成任务列表
         RecyclerView recyclerView = findViewById(R.id.finished_rv);
-        final TaskListAdapter adapter = new TaskListAdapter(this,mTaskViewModel);
+        final TaskListAdapter adapter = new TaskListAdapter(this,mTaskViewModel, Constant.FINISHED_FLAG);
         recyclerView.setAdapter(adapter);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
@@ -208,61 +137,6 @@ public class MainActivity extends AppCompatActivity {
                 adapter.setTasks(taskInfos);
             }
         });
-        //左右滑动删除任务
-        ItemTouchHelper helper = new ItemTouchHelper(
-                new ItemTouchHelper.Callback() {
-                    @Override
-                    public int getMovementFlags(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
-                        int swipeFlags = ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT;
-                        return makeMovementFlags(0,swipeFlags);
-                    }
-
-                    @Override
-                    public boolean onMove(@NonNull RecyclerView recyclerView,
-                                          @NonNull RecyclerView.ViewHolder viewHolder,
-                                          @NonNull RecyclerView.ViewHolder target) {
-                        return false;
-                    }
-
-                    @Override
-                    public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
-                        int layoutPosition = viewHolder.getLayoutPosition();
-                        TaskInfo taskAtPosition = adapter.getTaskAtPosition(layoutPosition);
-                        Toast.makeText(MainActivity.this, "Deleting " +
-                                taskAtPosition.getUrl(), Toast.LENGTH_LONG).show();
-                        Log.d(LOG_TAG,"左右滑动删除!") ;
-                        mTaskViewModel.delete(taskAtPosition,Constant.FINISHED_FLAG);
-                    }
-                    @Override
-                    public float getSwipeThreshold(@NonNull RecyclerView.ViewHolder viewHolder) {
-                        return 0.5f;
-                    }
-
-                    @Override
-                    public void onChildDraw(@NonNull Canvas c, @NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
-                        if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE || actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
-                            float alpha = 1 - (Math.abs(dX) / recyclerView.getWidth());
-                            viewHolder.itemView.setAlpha(alpha);
-                        }
-                        super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
-                    }
-                }
-        ) ;
-        helper.attachToRecyclerView(recyclerView);
-
-        //增加对item的单机和双击监听
-        ItemClickSupport.addTo(recyclerView)
-                .setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
-                    @Override
-                    public void onItemClicked(RecyclerView recyclerView, int position, View v) {
-                        //完成任务不响应
-                    }
-
-                    @Override
-                    public void onItemDoubleClicked(RecyclerView recyclerView, int position, View v) {
-                        mTaskViewModel.selectTask(position,Constant.FINISHED_FLAG) ;
-                    }
-                });
     }
     private void initFabAdd(){
         //新增下载任务

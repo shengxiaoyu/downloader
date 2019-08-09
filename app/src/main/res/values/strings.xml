@@ -13,4 +13,9 @@
     <string name="need_number">Please input a number(>1)</string>
     <string name="downloading">Downloading</string>
     <string name="complete">Complete</string>
+    <string name="start">start</string>
+    <string name="pause">pause</string>
+    <string name="delete">delete</string>
+    <string name="up">up</string>
+    <string name="down">down</string>
 </resources>

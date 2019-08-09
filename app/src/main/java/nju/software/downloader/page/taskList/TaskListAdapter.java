@@ -1,24 +1,19 @@
 package nju.software.downloader.page.taskList;
 
 import android.content.Context;
-import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
-import androidx.core.view.DragStartHelper;
-import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
-
-import com.google.android.material.chip.Chip;
 
 import java.util.List;
 
@@ -31,13 +26,14 @@ public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHo
 
     private List<TaskInfo> mTaskInfos; // Cached copy of words
     private TaskViewModel taskViewModel ;
-
+    private int flag ;//标识当前时完成任务还是未完成任务列表
     private Context context ;
 
-    public TaskListAdapter(Context context,TaskViewModel myTaskViewModel) {
+    public TaskListAdapter(Context context, TaskViewModel myTaskViewModel, int flag) {
         this.context = context ;
         mInflater = LayoutInflater.from(context);
         this.taskViewModel = myTaskViewModel ;
+        this.flag = flag ;
     }
 
     @NonNull
@@ -45,18 +41,58 @@ public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHo
     public TaskHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View itemView = mInflater.inflate(R.layout.recyclerview_item, parent, false);
         return new TaskHolder(itemView);
+
     }
 
     @Override
-    public void onBindViewHolder(@NonNull TaskHolder holder, int position) {
+    public void onBindViewHolder(@NonNull TaskHolder holder, final int position) {
+
         if (mTaskInfos != null) {
             TaskInfo current = mTaskInfos.get(position);
-            holder.bind(current);
+            holder.bind(current,position);
         } else {
             // Covers the case of data not being ready yet.
             holder.fileNameView.setText(Constant.EMPTY);
             holder.progressBar.setProgress(0);
         }
+        holder.startBt.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                taskViewModel.pasueOrBegin(position);
+            }
+        });
+        holder.pauseBt.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                taskViewModel.pasueOrBegin(position);
+            }
+        });
+        holder.deleteBt.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                taskViewModel.delete(mTaskInfos.get(position),flag);
+            }
+        });
+        holder.selectBox.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                taskViewModel.selectTask(position,flag);
+            }
+        });
+
+        holder.upBt.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                taskViewModel.move(position,position-1);
+            }
+        });
+
+        holder.downBt.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                taskViewModel.move(position,position+1);
+            }
+        });
     }
 
 
@@ -88,24 +124,39 @@ public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHo
     //定义单个item如何展示
     class TaskHolder extends RecyclerView.ViewHolder
     {
+        private final TextView indexView ;
         private final TextView fileNameView;
         private final TextView speedView ;
         private final ProgressBar progressBar ;
-        private final ImageView selectView;
+        private final Button startBt ;
+        private final Button pauseBt ;
+        private final Button deleteBt ;
+        private final CheckBox selectBox ;
+        private final Button upBt ;
+        private final Button downBt ;
 
         private TaskHolder(View itemView) {
             super(itemView);
+            indexView = itemView.findViewById(R.id.index_tv) ;
             progressBar = itemView.findViewById(R.id.progressBar) ;
             speedView = itemView.findViewById(R.id.speed_tv) ;
             fileNameView = itemView.findViewById(R.id.filename_tv);
-            selectView = itemView.findViewById(R.id.select_iv) ;
+
+            startBt = itemView.findViewById(R.id.start_btn);
+            pauseBt = itemView.findViewById(R.id.pause_btn);
+            deleteBt = itemView.findViewById(R.id.delete_btn) ;
+            selectBox = itemView.findViewById(R.id.select_box) ;
+
+            upBt = itemView.findViewById(R.id.up_btn);
+            downBt = itemView.findViewById(R.id.down_btn);
         }
         //单个item如何展示
-        void bind(final TaskInfo current){
+        void bind(final TaskInfo current,int position){
             if(current==null){
                 fileNameView.setText(Constant.EMPTY);
                 progressBar.setProgress(0);
             }
+            indexView.setText(position+1+"");
             fileNameView.setText(current.getFileName()==null?current.getUrl():current.getFileName());
             progressBar.setProgress(current.getProgress()==null?0:current.getProgress());
 
@@ -129,7 +180,20 @@ public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHo
                 progressBar.setProgressDrawable(drawable) ;
             }
             speedView.setText(current.getSpeed());
-            selectView.setVisibility(current.isSelected()?View.VISIBLE:View.GONE);
+
+            if(current.isPaused()){
+                pauseBt.setVisibility(View.GONE);
+                startBt.setVisibility(View.VISIBLE);
+            }else {
+                startBt.setVisibility(View.GONE);
+                pauseBt.setVisibility(View.VISIBLE);
+            }
+            if(flag==Constant.FINISHED_FLAG){
+                startBt.setVisibility(View.GONE);
+                pauseBt.setVisibility(View.GONE);
+                upBt.setVisibility(View.GONE);
+                downBt.setVisibility(View.GONE);
+            }
         }
     }
 

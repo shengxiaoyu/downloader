@@ -51,7 +51,7 @@ public class TaskListLiveData extends MutableLiveData<List<TaskInfo>> {
 
     public TaskInfo get(int index){
         CopyOnWriteArrayList<TaskInfo> oldTasks = (CopyOnWriteArrayList)getValue();
-        if(oldTasks!=null){
+        if(oldTasks!=null&&index>=0&&index<oldTasks.size()){
             return oldTasks.get(index) ;
         }
         return null ;

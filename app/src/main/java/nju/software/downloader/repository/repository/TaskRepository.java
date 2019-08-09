@@ -266,7 +266,9 @@ public class TaskRepository {
         TaskInfo movingTask = unfinishedTaskListLiveData.get(oldPosition);
         TaskInfo targetPositionTask = unfinishedTaskListLiveData.get(targetPosition) ;
 
-
+        if(movingTask==null||targetPositionTask==null){
+            return;
+        }
 
         //检测运行状态
         if(oldPosition>targetPosition){
