@@ -11,8 +11,14 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import java.net.MalformedURLException;
+import java.net.URL;
+
 import nju.software.downloader.R;
 
+/**
+ * 新增页面
+ */
 public class AddTaskActivity extends AppCompatActivity {
     public static final String EXTRA_REPLY =
             "nju.software.fileAdd.REPLY";
@@ -30,13 +36,24 @@ public class AddTaskActivity extends AppCompatActivity {
             public void onClick(View view) {
                 Intent replyIntent = new Intent();
                 Log.d(LOG_TAG,"获取下载url") ;
+
                 if (TextUtils.isEmpty(mEditWordView.getText())) {
                     setResult(RESULT_CANCELED, replyIntent);
                     Toast.makeText(
                             getApplicationContext(),
                             R.string.empty_not_saved,
                             Toast.LENGTH_LONG).show();
+
                 } else {
+                    //检验url有效性
+                    String url = mEditWordView.getText().toString() ;
+                    try{
+                        new URL(url) ;
+                    } catch (MalformedURLException e) {
+                        Toast.makeText(getApplicationContext(),
+                                "URL is invalid",Toast.LENGTH_SHORT).show();
+                    }
+
                     String word = mEditWordView.getText().toString();
                     replyIntent.putExtra(EXTRA_REPLY, word);
                     setResult(RESULT_OK, replyIntent);
@@ -44,7 +61,6 @@ public class AddTaskActivity extends AppCompatActivity {
                     //这个activity结束，出栈
                     finish();
                 }
-
             }
         });
     }

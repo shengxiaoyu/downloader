@@ -22,12 +22,12 @@ import nju.software.downloader.repository.asyncTasks.DownloadTask;
 public class DBTaskManager {
     private TaskDao taskDao ;
     private ExecutorService writeExecutorService ;
-    private TaskRepository networkTaskManager ;
+    private TaskRepository taskRepository;
 
     public DBTaskManager(Application context, TaskRepository taskRepository){
         this.taskDao = new TaskDao(context);
         writeExecutorService = Executors.newSingleThreadExecutor();
-        this.networkTaskManager = taskRepository ;
+        this.taskRepository = taskRepository ;
     }
 
     public void getAllTasks(){
@@ -35,7 +35,7 @@ public class DBTaskManager {
     }
 
     /**
-     * 向数据库插入，这个任务扔给线程池，不用知道什么时候成功
+     * 向数据库插入，这个任务扔给线程池，插入成功之后才开始下载
      * @param taskInfo
      * @param downloadTask
      * @param threadPoolExecutor
@@ -44,7 +44,7 @@ public class DBTaskManager {
         writeExecutorService.execute(new InsertTask(taskInfo,downloadTask,threadPoolExecutor));
     }
     /**
-     * 数据库删除，同理插入
+     * 数据库删除
      */
     public void delete(TaskInfo taskInfo){
         writeExecutorService.execute(new DeleteSingleTask(taskInfo));
@@ -106,7 +106,7 @@ public class DBTaskManager {
         @Override
         protected void onPostExecute(List<TaskInfo> taskInfos) {
             super.onPostExecute(taskInfos);
-            networkTaskManager.restartUnfinishedTask(taskInfos); ;
+            taskRepository.restartAndNotifyUI(taskInfos); ;
         }
     }
 

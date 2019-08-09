@@ -38,6 +38,10 @@ import static nju.software.downloader.util.Constant.CONFIGUATION_INTENT_CODE;
 import static nju.software.downloader.util.Constant.NEW_DOWNLADER_TASK_ACTIVITY_REQUEST_CODE;
 import static nju.software.downloader.util.Constant.PERMISSIONS_REQUEST_EXTERNAL_STORAGE;
 
+
+/**
+ * 任务展示页面，包括已完成和未完成
+ */
 public class MainActivity extends AppCompatActivity {
 
     //activity只和viewmodel交互
@@ -161,6 +165,7 @@ public class MainActivity extends AppCompatActivity {
         } else if(requestCode == CONFIGUATION_INTENT_CODE && resultCode == RESULT_OK) {
             int max_connection_number = data.getIntExtra(ConfigActivity.EXTRA_REPLY,0);
             if(max_connection_number!=0&&max_connection_number!=Constant.MAX_TASKS){
+                //这里做更新的有效性检验，以减少后端调用
                 mTaskViewModel.changeMaxConnectionNumber(max_connection_number) ;
             }
         }

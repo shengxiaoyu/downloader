@@ -14,6 +14,10 @@ import android.widget.Toast;
 import nju.software.downloader.R;
 import nju.software.downloader.util.Constant;
 
+
+/**
+ * 配置页面
+ */
 public class ConfigActivity extends AppCompatActivity {
     private EditText maxConnectionNumbersEt ;
     private Button updateBt ;

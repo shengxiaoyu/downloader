@@ -2,10 +2,16 @@ package nju.software.downloader.model;
 
 import androidx.lifecycle.MutableLiveData;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class TaskListLiveData extends MutableLiveData<List<TaskInfo>> {
+    public TaskListLiveData(){
+        //确保不会为空
+        CopyOnWriteArrayList<TaskInfo> values = new CopyOnWriteArrayList<>() ;
+        postValue(values);
+    }
     public void updateValue(TaskInfo taskInfo){
         List<TaskInfo> oldTasks = getValue();
         for(TaskInfo theTask:oldTasks){
@@ -84,6 +90,17 @@ public class TaskListLiveData extends MutableLiveData<List<TaskInfo>> {
                 oldTasks.remove(taskInfo) ;
             }
         }
+        postValue(oldTasks);
+    }
+
+    public void addValues(ArrayList<TaskInfo> tasks) {
+        CopyOnWriteArrayList<TaskInfo> oldTasks = (CopyOnWriteArrayList)getValue();
+
+        if(tasks!=null&&tasks.size()>0){
+            oldTasks.addAll(tasks) ;
+        }
+
+        //更新并通知前端
         postValue(oldTasks);
     }
 }

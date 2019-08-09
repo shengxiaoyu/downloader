@@ -8,6 +8,10 @@ import nju.software.downloader.repository.asyncTasks.DownloadTask;
 import nju.software.downloader.util.Constant;
 
 
+/**
+ * 任务实体类，记录了任务的主要属性，前端展示信息和数据库存储信息。
+ * 任务的下载信息放在一起，这个类就过于重，因此独立出一个DownloadTask类，专门管理下载过程信息。
+ */
 public class TaskInfo implements Serializable,Comparable<TaskInfo> {
 
     private Long id ;
@@ -20,14 +24,16 @@ public class TaskInfo implements Serializable,Comparable<TaskInfo> {
     //存储文件名
     private String fileName ;
 
-    //任务优先级
+    /**
+     * 任务优先级，通过priority和jumpTimeStamp控制，任务比较通过先比较优先级，值越小优先级越大，相同情况比较插队时间戳，改时间戳越大，优先级越高
+     */
     private int priority ;
 
     //插队的时间戳
     private long jumpTimeStamp;
 
     //下载进度
-    private Integer progress ;
+    private int progress ;
 
     //下载速度
     private String speed = Constant.SPEED_OF_WAITTING;
@@ -81,15 +87,11 @@ public class TaskInfo implements Serializable,Comparable<TaskInfo> {
     }
 
 
-
-
-
-
-    public Integer getProgress() {
+    public int getProgress() {
         return progress;
     }
 
-    public void setProgress(Integer progress) {
+    public void setProgress(int progress) {
         this.progress = progress;
     }
 
@@ -119,10 +121,6 @@ public class TaskInfo implements Serializable,Comparable<TaskInfo> {
     @NonNull
     public String getUrl() {
         return url;
-    }
-
-    public void setUrl(@NonNull String url) {
-        this.url = url;
     }
 
     public String getSpeed() {
@@ -186,7 +184,7 @@ public class TaskInfo implements Serializable,Comparable<TaskInfo> {
 
     /**
      * 优先级比较，通过两个属性来比较：首先是比较priotity属性，如果priority相等，
-     * 再比较插队的时间戳，因为插队的时候一定是吧prioity设为被插队的task的priority,并记录插队时间戳，因此时间戳大的就是后来插队的，应该排在前面
+     * 再比较插队的时间戳，因为插队的时候一定是吧prioity设为被插队的task的priority,并记录插队时间戳，插队时间戳的更新方式为：往前插则设为当前系统时间，往后插则为原位置记录时间戳-1.所以priority相同的情况下，时间戳大的优先级高
      * @param taskInfo
      * @return
      */

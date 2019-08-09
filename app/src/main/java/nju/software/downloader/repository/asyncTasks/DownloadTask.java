@@ -18,6 +18,10 @@ import nju.software.downloader.model.TaskListLiveData;
 import nju.software.downloader.repository.database.DBTaskManager;
 import nju.software.downloader.util.Constant;
 
+/***
+ * 下载任务核心类，该类作为下载、实时更新进度、速度的关键类。拥有5个状态：WAITTING,RUNNING,PAUSE,FINISHED,DELETE,
+ * 一般一个DownloadTask对应唯一一个TaskInfo，一个TaskInfo可能再整个下载周期内和多个DownloadTask联系，因为任务暂停，重启等都会设计取消下载，重新下载
+ */
 public class DownloadTask implements Runnable,Comparable<DownloadTask>{
     private TaskListLiveData unfinishedTaskListLiveData;
     private TaskListLiveData finishedTaskListLiveData ;
@@ -50,6 +54,10 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
         status = WAITTING ;
     }
 
+    /**下载核心过程，需要注意两点：
+     *  1、下载过程中实时检测任务状态量volatile status的变化，通过这个状态获取任务是否该被中断，从而实现暂停、取消
+     * 2、跟新进度条，通过两个手段控制进度条的更新，减少更新频次，避免界面闪屏。一是固定间隔时间计算一次进度，二是进度低于阈值不更新
+     */
     @Override
     public void run() {
         File saveFile = new File(saveDir,taskInfo.getFileName()) ;
@@ -66,7 +74,6 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
             long beginPosition = saveFile.length();
             //是否断点续传
             boolean isResume=false ;
-
 
             if(beginPosition>0){
                 try {
@@ -109,7 +116,7 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
             //进度更新量
             int changeProgress;
             while ((count = input.read(data)) != -1) {
-                if (Thread.currentThread().isInterrupted()) {
+                if (Thread.currentThread().isInterrupted()||status!=RUNNING) {
                     return ;
                 }
                 // allow canceling
@@ -120,11 +127,12 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
                 }else {
                     output.write(data, 0, count);
                 }
-                //跟新进度条，时间间隔
+
+
                 if (((endTime=System.currentTimeMillis())-beginTime)> Constant.REFRESH_PROGRESS_INTERVAL) { // only if total length is known
                     //如果进度小于1，不更新
                     changeProgress = (int)num*100/fileLength ;
-                    if(changeProgress<1){
+                    if(changeProgress<Constant.PERRESE_PROGRESS_LOW){
                         continue;
                     }
 
@@ -258,4 +266,7 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
         return status==WAITTING ;
     }
 
+    public boolean isRunning() {
+        return status==RUNNING ;
+    }
 }

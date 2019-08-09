@@ -25,18 +25,32 @@ import nju.software.downloader.repository.asyncTasks.DownloadTask;
 import nju.software.downloader.util.Constant;
 import nju.software.downloader.util.FileUtil;
 
-//封装数据的获取，可以从数据库，从网络
+/***
+ * 业务数据获取层，类过于重，应该将networkDownloadTask独立出来。
+ */
+
 public class TaskRepository {
+
     private DBTaskManager dbTaskManager;
+    /**
+     * 缓存数据，和前端以及数据库交互，使用LiveData，已到达及时通知存货的前端组件数据变更
+     */
     private volatile TaskListLiveData unfinishedTaskListLiveData ;
     private volatile TaskListLiveData finishedTaskListLiveData ;
+
+    /*
+    文件存储位置
+     */
     private static File saveDir;
     private static String LOG_TAG = TaskRepository.class.getSimpleName();
 
+    /**
+     * 自定义线程池，继承扩展了线程池，本质就相当于了networkDownloadTaskManager,但是和TaskRepository,UnfinishedTaskListLiveData,finishedTaskListLiveData耦合太重，没能完全独立出来。阻塞队列使用优先级队列，以实现任务的插队
+     */
     private CustomerThreadPoolExecutor threadPoolExecutor ;
 
     public TaskRepository(Application application) {
-        //下载保存到外村Download目录下
+        //下载保存到外存Download目录下
         saveDir = application.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
         Log.d(LOG_TAG, "存储目录：" + saveDir.getAbsolutePath());
 
@@ -49,13 +63,12 @@ public class TaskRepository {
 
         dbTaskManager = new DBTaskManager(application,this) ;
 
-        //初始化taskList
-        dbTaskManager.getAllTasks();
-
+        //初始化taskList，
+        init();
 
     }
 
-    //LiveData room自动启动worker线程获取数据
+    //LiveData 观察数据变动
     public LiveData<List<TaskInfo>> getUnfinishedTasks() {
         return unfinishedTaskListLiveData;
     }
@@ -64,22 +77,49 @@ public class TaskRepository {
         return finishedTaskListLiveData ;
     }
 
+    private void init(){
+        //初始化包括，从数据库获得数据，前端展示，未完成任务重启，
+        //这里确保dbTask先获得所有的任务列表，然后再更新前端和重启任务
+        dbTaskManager.getAllTasks();
+    }
 
-    //重启未完成任务
-    public void restartUnfinishedTask(List<TaskInfo> taskIList){
+    /**
+     * 从数据库获取全部的，然后再内存中进行分类，减少数据库操作
+     */
+
+    public void restartAndNotifyUI(List<TaskInfo> taskIList){
         if(taskIList==null||taskIList.size()==0){
             return;
         }
+        ArrayList<TaskInfo> unfinished = new ArrayList<>() ;
+        ArrayList<TaskInfo> finished = new ArrayList<>() ;
+
+        //先分组
         for(TaskInfo taskInfo:taskIList) {
             if(!taskInfo.isFinished()) {
-                threadPoolExecutor.execute(new DownloadTask(dbTaskManager, saveDir, unfinishedTaskListLiveData, taskInfo,finishedTaskListLiveData));
+                unfinished.add(taskInfo) ;
+            }else {
+                //已完成的前端展示的速度、完成度需要特殊处理
+                taskInfo.setSpeed(Constant.SPEED_OF_FINISHED);
+                taskInfo.setProgress(100);
+                finished.add(taskInfo) ;
             }
+        }
+        //先更新前端
+        unfinishedTaskListLiveData.addValues(unfinished);
+        finishedTaskListLiveData.addValues(finished);
+
+        //重启下载
+        for(TaskInfo taskInfo:unfinished) {
+            threadPoolExecutor.execute(new DownloadTask(dbTaskManager, saveDir, unfinishedTaskListLiveData, taskInfo, finishedTaskListLiveData));
         }
     }
 
-    //插入任务，使用异步线程
+    /**
+     * 插入任务，使用异步线程
+     */
     public void insert(TaskInfo taskInfo) {
-        //这里只做更新数据库，更新缓存数据以更新前端展示
+        //这里只做前端及时更新，数据库更新交由dbTaskManager,数据库插入成功之后才能开始下载任务
         URL url = null;
         try {
             url = new URL(taskInfo.getUrl());
@@ -102,19 +142,28 @@ public class TaskRepository {
             saveFile.createNewFile() ;
             taskInfo.setFileName(saveFile.getName());
             //更新task并通知前端
+            unfinishedTaskListLiveData.addValue(taskInfo);
+
             DownloadTask downloadTask = new DownloadTask(dbTaskManager, saveDir, unfinishedTaskListLiveData, taskInfo,finishedTaskListLiveData);
             dbTaskManager.insert(taskInfo,downloadTask,threadPoolExecutor);
 
-            unfinishedTaskListLiveData.addValue(taskInfo);
-
         } catch (MalformedURLException e) {
-            e.printStackTrace();
+            //不应该到这里，前端做了url解析
+            Log.d(LOG_TAG,"url解析错误"+e.getMessage()) ;
+
         } catch (IOException e) {
             e.printStackTrace();
+            Log.d(LOG_TAG,e.getMessage()) ;
         }
     }
 
+    /**
+     * 变更最大任务数
+     * @param max_connection_number 新的最大任务数
+     *  分为两种情况：增大和减少，增大可以依赖线程池原有的更新方法扩展池内线程数。但减少需要考虑是否活动线程数大于配置数，线程池默认只会清除空闲线程，这里需要使用自定义的线程池cutting方法
+     */
     public void changeMaxTaskNumbers(int max_connection_number) {
+
         if(max_connection_number>Constant.MAX_TASKS){
             Constant.MAX_TASKS = max_connection_number ;
             threadPoolExecutor.setMaximumPoolSize(max_connection_number);
@@ -154,15 +203,16 @@ public class TaskRepository {
         }
         //删除缓存，更新前端
         unfinishedTaskListLiveData.multiDelete(toStopTasks) ;
-
+        dbTaskManager.multiDelete(toStopTasks);
         List<TaskInfo> finishedTasks = finishedTaskListLiveData.getValue();
-        List<TaskInfo> toStopTasksOfFinished = new ArrayList<>() ;
+        List<TaskInfo> toDeleteFinishedTasks = new ArrayList<>() ;
         for(TaskInfo taskInfo:finishedTasks){
             if (taskInfo.isSelected()){
-                toStopTasksOfFinished.add(taskInfo) ;
+                toDeleteFinishedTasks.add(taskInfo) ;
             }
         }
-        finishedTaskListLiveData.multiDelete(toStopTasksOfFinished) ;
+        finishedTaskListLiveData.multiDelete(toDeleteFinishedTasks) ;
+        dbTaskManager.multiDelete(toDeleteFinishedTasks);
     }
 
 

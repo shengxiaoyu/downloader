@@ -4,7 +4,6 @@ public class Constant {
 
     //增加下载任务 意图标识
     public static final int NEW_DOWNLADER_TASK_ACTIVITY_REQUEST_CODE = 1;
-
     public static final int CONFIGUATION_INTENT_CODE = 2 ;
 
     public static final int FINISHED_FLAG = 1 ;
@@ -12,13 +11,11 @@ public class Constant {
 
     //申请外存读写权限代码
     public static final int PERMISSIONS_REQUEST_EXTERNAL_STORAGE = 1 ;
-    public static final int BLOCKQUEUE_INIT_VALUE = 11;
 
     //同时最大下载数
     public static volatile int MAX_TASKS = 2 ;
     public static String MAX_TASKS_KEY = "number_of_max_tasks" ;
 
-    public static final int TIMES_UPDATE_PROGRESS = 20 ;
 
     public static final int KB = 1<<10 ;
 
@@ -35,6 +32,8 @@ public class Constant {
     public static final String EMPTY = "No Task Info" ;
 
     //刷新进度最低延迟
-    public static final int REFRESH_PROGRESS_INTERVAL = 500 ;
-    
+    public static final int REFRESH_PROGRESS_INTERVAL = 1000 ;
+
+    //进度最小更新
+    public static final int PERRESE_PROGRESS_LOW = 1;
 }

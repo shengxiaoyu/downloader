@@ -46,7 +46,6 @@ public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHo
 
     @Override
     public void onBindViewHolder(@NonNull TaskHolder holder, final int position) {
-
         if (mTaskInfos != null) {
             TaskInfo current = mTaskInfos.get(position);
             holder.bind(current,position);
@@ -122,7 +121,6 @@ public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHo
     //定义单个item如何展示
     class TaskHolder extends RecyclerView.ViewHolder
     {
-        private final TextView indexView ;
         private final TextView fileNameView;
         private final TextView speedView ;
         private final ProgressBar progressBar ;
@@ -135,7 +133,6 @@ public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHo
 
         private TaskHolder(View itemView) {
             super(itemView);
-            indexView = itemView.findViewById(R.id.index_tv) ;
             progressBar = itemView.findViewById(R.id.progressBar) ;
             speedView = itemView.findViewById(R.id.speed_tv) ;
             fileNameView = itemView.findViewById(R.id.filename_tv);
@@ -154,11 +151,11 @@ public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHo
                 fileNameView.setText(Constant.EMPTY);
                 progressBar.setProgress(0);
             }
-            indexView.setText(position+1+"");
             fileNameView.setText(current.getFileName()==null?current.getUrl():current.getFileName());
-            progressBar.setProgress(current.getProgress()==null?0:current.getProgress());
+            progressBar.setProgress(current.getProgress());
 
             if(current.isPaused()){
+                //暂停和其他状态的进度条区别显示
                 final Drawable drawable;
                 int sdk = android.os.Build.VERSION.SDK_INT;
                 if(sdk < 16) {
@@ -186,7 +183,7 @@ public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHo
                 startBt.setVisibility(View.GONE);
                 pauseBt.setVisibility(View.VISIBLE);
             }
-            if(flag==Constant.FINISHED_FLAG){
+            if(current.isFinished()){
                 startBt.setVisibility(View.GONE);
                 pauseBt.setVisibility(View.GONE);
                 upBt.setVisibility(View.GONE);

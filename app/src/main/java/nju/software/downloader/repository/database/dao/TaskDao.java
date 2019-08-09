@@ -45,8 +45,7 @@ public class TaskDao {
     }
 
     /**
-     * 返回所有下载任务列表，结果分为两个list，第一个为已完成任务列表，第二个为未完成任务列表
-     * 在项目启动的初始化阶段调用
+     * 返回所有下载任务列表
      * @return
      */
     public List<TaskInfo> findAll(){
@@ -72,7 +71,7 @@ public class TaskDao {
         );
         ArrayList<TaskInfo> taskInfos = new ArrayList() ;
 
-        //实例化每个任务，并找出当前最大的id
+        //实例化每个任务
         long id;
         String url ;
         String fileName ;
@@ -101,8 +100,16 @@ public class TaskDao {
         dbWriter.delete(TaskContract.TaskEntry.TABLE_NAME,selection,selectionArgs) ;
     }
     public void deleteTasks(long[] ids){
-        String selection = TaskContract.TaskEntry._ID +" in ( "+ TextUtils.join(",", Collections.singleton(ids)) +")";
-        dbWriter.delete(TaskContract.TaskEntry.TABLE_NAME,selection,new String[0]) ;
+        StringBuilder sb = new StringBuilder() ;
+        if(ids!=null && ids.length>0){
+            for(long id:ids){
+                sb.append(id+"");
+                sb.append(",") ;
+            }
+            sb.delete(sb.length()-1,sb.length()) ;
+            String selection = TaskContract.TaskEntry._ID +" in ( "+ sb.toString() +")";
+            dbWriter.delete(TaskContract.TaskEntry.TABLE_NAME,selection,new String[0]) ;
+        }
     }
     public void update(TaskInfo taskInfo){
         ContentValues values = new ContentValues() ;
