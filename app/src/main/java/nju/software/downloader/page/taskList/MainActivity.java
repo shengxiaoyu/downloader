@@ -51,6 +51,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         //初始化最大连接数
         mPreferences = getSharedPreferences(sharedPrefFile,MODE_PRIVATE) ;
+        //用了一个全局变量来存储
         Constant.MAX_TASKS = mPreferences.getInt(Constant.MAX_TASKS_KEY,Constant.MAX_TASKS);
 
         setContentView(R.layout.activity_main);
@@ -65,10 +66,10 @@ public class MainActivity extends AppCompatActivity {
 
         //初始化完成列表
         initCommpleteTaskList() ;
-        //初始化Fab-新增
+        //初始化Fab-新增按钮
         initFabAdd();
 
-        //检查并申请权限
+        //检查并申请权限，需要读写权限用于存储文件，检查网络连接情况
         checkAndRequestPermissions() ;
     }
 
@@ -149,7 +150,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-    //新增任务和更新最大连接数的逻辑处理
+
+    //从Add和Config两个activity回来的处理函数
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 

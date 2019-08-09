@@ -24,7 +24,7 @@
         <TextView
             android:id="@+id/index_tv"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_alignBottom="@+id/speed_tv"
             android:layout_alignParentStart="true"
             android:layout_alignParentLeft="true"

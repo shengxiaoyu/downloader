@@ -8,12 +8,12 @@ import android.util.Log;
 import androidx.lifecycle.LiveData;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -21,13 +21,13 @@ import java.util.concurrent.TimeUnit;
 import nju.software.downloader.model.TaskInfo;
 import nju.software.downloader.model.TaskListLiveData;
 import nju.software.downloader.repository.database.TaskDao;
+import nju.software.downloader.repository.repository.asyncTasks.CustomerThreadPoolExecutor;
 import nju.software.downloader.repository.repository.asyncTasks.DeleteSingleTask;
 import nju.software.downloader.repository.repository.asyncTasks.DownloadTask;
 import nju.software.downloader.repository.repository.asyncTasks.GetAllTask;
 import nju.software.downloader.repository.repository.asyncTasks.UpdateDBTask;
 import nju.software.downloader.repository.room.TaskRoomDatabase;
 import nju.software.downloader.util.Constant;
-import nju.software.downloader.repository.repository.asyncTasks.CustomerThreadPoolExecutor;
 import nju.software.downloader.util.FileUtil;
 
 //封装数据的获取，可以从数据库，从网络
@@ -159,6 +159,9 @@ public class TaskRepository {
                     saveFile = new File(saveDir, FileUtil.increaseFileName(fileName, index));
                     index++;
                 }
+
+                //要把这个文件创建存起来，避免后续的文件检查的时候发现没有文件，导致重名
+                saveFile.createNewFile() ;
                 taskInfo.setFileName(saveFile.getName());
                 //更新task并通知前端
                 long id = taskDao.insert(taskInfo);
@@ -168,6 +171,9 @@ public class TaskRepository {
 
                 return downloadTask ;
             } catch (MalformedURLException e) {
+                e.printStackTrace();
+                return null ;
+            } catch (IOException e) {
                 e.printStackTrace();
                 return null ;
             }

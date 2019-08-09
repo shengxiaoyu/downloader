@@ -101,8 +101,6 @@ public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHo
         notifyDataSetChanged();
     }
 
-    // getItemCount() is called many times, and when it is first called,
-    // mTaskInfos has not been updated (means initially, it's null, and we can't return null).
     @Override
     public int getItemCount() {
         if (mTaskInfos != null)

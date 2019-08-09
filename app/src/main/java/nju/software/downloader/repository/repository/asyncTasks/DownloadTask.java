@@ -172,7 +172,10 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
         } catch (MalformedURLException e) {
             e.printStackTrace();
         } catch (IOException e) {
+            Log.d(LOG_TAG,"中途失去网络连接") ;
             e.printStackTrace();
+            //把自己置为取消状态
+            pause();
         }finally {
             try {
                 if (rwd != null)
@@ -252,7 +255,6 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
         runningThread = null ;
         status = DownloadTask.WAITTING;
         taskInfo.setSpeed(Constant.SPEED_OF_WAITTING);
-        taskInfo.setPaused(true);
         unfinishedTaskListLiveData.updateValue(this.taskInfo);
     }
     boolean isWaitting(){
