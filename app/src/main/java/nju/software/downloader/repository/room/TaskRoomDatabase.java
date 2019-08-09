@@ -1,4 +1,4 @@
-package nju.software.downloader.storage.room;
+package nju.software.downloader.repository.room;
 
 import android.content.Context;
 
@@ -11,7 +11,7 @@ import androidx.room.RoomDatabase;
 import androidx.sqlite.db.SupportSQLiteOpenHelper;
 
 import nju.software.downloader.model.TaskInfo;
-import nju.software.downloader.storage.dao.TaskDao;
+import nju.software.downloader.repository.database.TaskDao;
 
 //定义哪些entities属于此数据库
 @Database(entities = {TaskInfo.class},version = 4,exportSchema = false)

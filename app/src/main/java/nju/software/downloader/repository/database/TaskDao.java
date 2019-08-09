@@ -1,6 +1,5 @@
-package nju.software.downloader.storage.dao;
+package nju.software.downloader.repository.database;
 
-import androidx.lifecycle.LiveData;
 import androidx.room.Dao;
 import androidx.room.Delete;
 import androidx.room.Insert;

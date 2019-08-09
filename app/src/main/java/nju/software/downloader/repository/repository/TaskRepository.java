@@ -1,4 +1,4 @@
-package nju.software.downloader.storage.repository;
+package nju.software.downloader.repository.repository;
 
 import android.app.Application;
 import android.os.AsyncTask;
@@ -20,14 +20,14 @@ import java.util.concurrent.TimeUnit;
 
 import nju.software.downloader.model.TaskInfo;
 import nju.software.downloader.model.TaskListLiveData;
-import nju.software.downloader.storage.dao.TaskDao;
-import nju.software.downloader.storage.repository.asyncTasks.DeleteSingleTask;
-import nju.software.downloader.storage.repository.asyncTasks.DownloadTask;
-import nju.software.downloader.storage.repository.asyncTasks.GetAllTask;
-import nju.software.downloader.storage.repository.asyncTasks.UpdateDBTask;
-import nju.software.downloader.storage.room.TaskRoomDatabase;
+import nju.software.downloader.repository.database.TaskDao;
+import nju.software.downloader.repository.repository.asyncTasks.DeleteSingleTask;
+import nju.software.downloader.repository.repository.asyncTasks.DownloadTask;
+import nju.software.downloader.repository.repository.asyncTasks.GetAllTask;
+import nju.software.downloader.repository.repository.asyncTasks.UpdateDBTask;
+import nju.software.downloader.repository.room.TaskRoomDatabase;
 import nju.software.downloader.util.Constant;
-import nju.software.downloader.util.CustomerThreadPoolExecutor;
+import nju.software.downloader.repository.repository.asyncTasks.CustomerThreadPoolExecutor;
 import nju.software.downloader.util.FileUtil;
 
 //封装数据的获取，可以从数据库，从网络
@@ -54,7 +54,7 @@ public class TaskRepository {
         threadPoolExecutor = new CustomerThreadPoolExecutor(Constant.MAX_TASKS,
                 Constant.MAX_TASKS,
                 0L,TimeUnit.MILLISECONDS,
-                new PriorityBlockingQueue<Runnable>(Constant.BLOCKQUEUE_INIT_VALUE,new downloadTaskCompator())) ;
+                new PriorityBlockingQueue<Runnable>()) ;
     }
 
     //LiveData room自动启动worker线程获取数据
@@ -85,8 +85,23 @@ public class TaskRepository {
     }
 
     public void changeMaxTaskNumbers(int max_connection_number) {
-        Constant.MAX_TASKS = max_connection_number ;
-        threadPoolExecutor.setCorePoolSize(max_connection_number);
+        if(max_connection_number>Constant.MAX_TASKS){
+            Constant.MAX_TASKS = max_connection_number ;
+            threadPoolExecutor.setMaximumPoolSize(max_connection_number);
+            threadPoolExecutor.setCorePoolSize(max_connection_number);
+        }else {
+            //比原来小的时候一定要先改小max值
+            Constant.MAX_TASKS = max_connection_number ;
+            threadPoolExecutor.setCorePoolSize(max_connection_number);
+            threadPoolExecutor.setMaximumPoolSize(max_connection_number);
+            if(threadPoolExecutor.getActiveCount()>max_connection_number){
+                //正在执行的任务数大于了配置数，
+                //先清空等待队列，然后将执行任务中优先级低的停止。
+                threadPoolExecutor.cutting();
+            }
+        }
+
+
     }
 
     public void multiDelete() {
@@ -353,15 +368,6 @@ public class TaskRepository {
 
 
 
-    //线程池优先队列 比较器
-    private class downloadTaskCompator implements Comparator {
-        @Override
-        public int compare(Object o, Object t1) {
-            if(o instanceof DownloadTask && t1 instanceof DownloadTask){
-                return ((DownloadTask)o).compareTo(((DownloadTask)t1)) ;
-            }
-            return 0;
-        }
-    }
+
 
 }

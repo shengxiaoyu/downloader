@@ -1,11 +1,11 @@
-package nju.software.downloader.storage.repository.asyncTasks;
+package nju.software.downloader.repository.repository.asyncTasks;
 
 import android.os.AsyncTask;
 
 import java.io.File;
 
 import nju.software.downloader.model.TaskInfo;
-import nju.software.downloader.storage.dao.TaskDao;
+import nju.software.downloader.repository.database.TaskDao;
 
 public class DeleteSingleTask extends AsyncTask<TaskInfo,Void,Void> {
     private TaskDao taskDao;

@@ -1,9 +1,9 @@
-package nju.software.downloader.storage.repository.asyncTasks;
+package nju.software.downloader.repository.repository.asyncTasks;
 
 import android.os.AsyncTask;
 
 import nju.software.downloader.model.TaskInfo;
-import nju.software.downloader.storage.dao.TaskDao;
+import nju.software.downloader.repository.database.TaskDao;
 
 public class UpdateDBTask extends AsyncTask<TaskInfo,Void,Void> {
     private TaskDao taskDao;

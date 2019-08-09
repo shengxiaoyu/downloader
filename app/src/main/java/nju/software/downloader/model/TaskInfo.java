@@ -8,7 +8,7 @@ import androidx.room.PrimaryKey;
 
 import java.io.Serializable;
 
-import nju.software.downloader.storage.repository.asyncTasks.DownloadTask;
+import nju.software.downloader.repository.repository.asyncTasks.DownloadTask;
 import nju.software.downloader.util.Constant;
 
 
@@ -68,8 +68,17 @@ public class TaskInfo implements Serializable,Comparable<TaskInfo> {
         this.downloadTask = downloadTask;
     }
 
-    public TaskInfo(@NonNull String url){
+    public TaskInfo(String url){
         this.url = url ;
+    }
+    @Ignore
+    public TaskInfo(long id, String url, String fileName, boolean finished, int priority, long jumpTimeStamp){
+        this.id = id ;
+        this.url = url ;
+        this.fileName = fileName ;
+        this.finished = finished ;
+        this.priority = priority ;
+        this.jumpTimeStamp = jumpTimeStamp ;
 
     }
     //room使用一个构造器去添加构造，因此要@Ignore一个

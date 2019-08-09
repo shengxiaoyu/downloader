@@ -1,4 +1,4 @@
-package nju.software.downloader.storage.repository.asyncTasks;
+package nju.software.downloader.repository.repository.asyncTasks;
 
 import android.util.Log;
 
@@ -12,12 +12,11 @@ import java.io.RandomAccessFile;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-
-import javax.net.ssl.HttpsURLConnection;
+import java.util.concurrent.Executors;
 
 import nju.software.downloader.model.TaskInfo;
 import nju.software.downloader.model.TaskListLiveData;
-import nju.software.downloader.storage.dao.TaskDao;
+import nju.software.downloader.repository.database.TaskDao;
 import nju.software.downloader.util.Constant;
 
 public class DownloadTask implements Runnable,Comparable<DownloadTask>{
@@ -187,8 +186,6 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
         }
 
     }
-
-
     @Override
     public int compareTo(DownloadTask downloadTask) {
         return taskInfo.compareTo(downloadTask.taskInfo);
@@ -246,5 +243,22 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
         runningThread = null ;
         taskInfo.setDownloadTask(null);
         status = DownloadTask.DELETE;
+    }
+    public void waittting(){
+        if(runningThread!=null){
+            runningThread.interrupt();
+        }
+        //释放引用
+        runningThread = null ;
+        status = DownloadTask.WAITTING;
+        taskInfo.setSpeed(Constant.SPEED_OF_WAITTING);
+        taskInfo.setPaused(true);
+        unfinishedTaskListLiveData.updateValue(this.taskInfo);
+    }
+    boolean isWaitting(){
+        return status==WAITTING ;
+    }
+
+    class FlagException extends RuntimeException{
     }
 }
