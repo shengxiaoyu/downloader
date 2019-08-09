@@ -8,8 +8,10 @@ import android.util.Log;
 import androidx.lifecycle.LiveData;
 
 import java.io.File;
+import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -130,6 +132,11 @@ public class TaskRepository {
                 url = new URL(taskInfo.getUrl());
                 String fileName = url.getFile();
                 fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
+                try {
+                    fileName = URLEncoder.encode(fileName,"utf8") ;
+                } catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                }
                 File saveFile = new File(saveDir, fileName);
                 //如果文件名重复
                 int index = 1;
