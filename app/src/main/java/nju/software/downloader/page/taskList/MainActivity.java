@@ -84,7 +84,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
-        //删除全部
+        //批量删除
         if (id == R.id.deleteSelected) {
             // Add a toast just for confirmation
             Toast.makeText(this, "Clearing tasks...",

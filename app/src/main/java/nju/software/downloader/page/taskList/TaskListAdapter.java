@@ -129,7 +129,7 @@ public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHo
         private final Button startBt ;
         private final Button pauseBt ;
         private final Button deleteBt ;
-        private final CheckBox selectBox ;
+        private final CheckBox  selectBox ;
         private final Button upBt ;
         private final Button downBt ;
 
@@ -192,6 +192,7 @@ public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHo
                 upBt.setVisibility(View.GONE);
                 downBt.setVisibility(View.GONE);
             }
+            selectBox.setChecked(current.isSelected());
         }
     }
 

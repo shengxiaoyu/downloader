@@ -12,7 +12,7 @@
     <string name="max_connections_label">MaxConnections</string>
     <string name="need_number">Please input a number(>1)</string>
     <string name="downloading">Downloading</string>
-    <string name="complete">Complete</string>
+    <string name="complete">Completed</string>
     <string name="start">start</string>
     <string name="pause">pause</string>
     <string name="delete">delete</string>
