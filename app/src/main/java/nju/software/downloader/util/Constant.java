@@ -17,8 +17,6 @@ public class Constant {
     public static volatile int MAX_TASKS = 2 ;
     public static String MAX_TASKS_KEY = "number_of_max_tasks" ;
 
-    public static final int TIMES_UPDATE_PROGRESS = 20 ;
-
     public static final int KB = 1<<10 ;
 
     public static final int MB = 1<<20 ;
@@ -33,5 +31,5 @@ public class Constant {
 
     public static final String EMPTY = "No Task Info" ;
 
-    public static final int BLOCKQUEUE_INIT_VALUE = 11 ;
+    public static final int REFRESH_PROGRESS_INTERVAL = 500 ;
 }

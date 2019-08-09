@@ -1,82 +1,70 @@
 package nju.software.downloader.model;
 
 import androidx.annotation.NonNull;
-import androidx.room.ColumnInfo;
-import androidx.room.Entity;
-import androidx.room.Ignore;
-import androidx.room.PrimaryKey;
 
+import java.io.File;
 import java.io.Serializable;
+import java.net.URL;
 
-import nju.software.downloader.storage.repository.asyncTasks.DownloadTask;
+import nju.software.downloader.repository.network.DownloadTask;
 import nju.software.downloader.util.Constant;
 
 
-@Entity(tableName = "TaskInfo_Table")
 public class TaskInfo implements Serializable,Comparable<TaskInfo> {
 
-    @NonNull
-    @ColumnInfo(name = "id")
-    //自增
-    @PrimaryKey(autoGenerate = true)
     private Long id ;
 
-    @NonNull
-    @ColumnInfo(name = "url")
     private String url ;
 
     //是否已完成
-    @ColumnInfo(name = "finished")
     private boolean finished ;
 
     //存储文件名
-    @ColumnInfo(name = "fileName")
     private String fileName ;
 
     //任务优先级
-    @ColumnInfo(name = "priority")
     private int priority ;
 
     //插队的时间戳
-    @ColumnInfo(name = "jumpTimeStamp")
     private long jumpTimeStamp;
 
     //下载进度
-    @Ignore
     private Integer progress ;
 
     //下载速度
-    @Ignore
     private String speed = Constant.SPEED_OF_WAITTING;
 
     //是否暂停状态
-    @Ignore
     private boolean paused ;
 
     //是否被选中
-    @Ignore
     private boolean selected ;
 
-    @Ignore
-    private volatile DownloadTask downloadTask ;
+    private DownloadTask downloadTask ;
 
-    public DownloadTask getDownloadTask() {
-        return downloadTask;
+
+    public TaskInfo(long id, String url, String fileName, boolean finished, int priority, long jumptimestamp){
+        this.id = id ;
+        this.url = url ;
+        this.fileName = fileName ;
+        this.priority = priority ;
+        this.jumpTimeStamp = jumptimestamp ;
+
+        if(finished){
+            progress = 100 ;
+        }else {
+            speed = Constant.SPEED_OF_WAITTING ;
+        }
     }
 
-    public void setDownloadTask(DownloadTask downloadTask) {
-        this.downloadTask = downloadTask;
-    }
+
 
     public TaskInfo(@NonNull String url){
         this.url = url ;
-
     }
-    //room使用一个构造器去添加构造，因此要@Ignore一个
-    @Ignore
-    public TaskInfo(Long id, @NonNull String url){
-        this.id = id ;
+    public TaskInfo(@NonNull String url,String fileName){
         this.url = url ;
+        this.fileName = fileName ;
     }
     void updateByAnotherOne(TaskInfo another){
         if(another==null){
@@ -90,13 +78,15 @@ public class TaskInfo implements Serializable,Comparable<TaskInfo> {
         this.selected = another.selected ;
         this.priority = another.priority ;
         this.jumpTimeStamp = another.jumpTimeStamp ;
-        this.downloadTask = another.downloadTask ;
     }
 
+    public DownloadTask getDownloadTask() {
+        return downloadTask;
+    }
 
-
-
-
+    public void setDownloadTask(DownloadTask downloadTask) {
+        this.downloadTask = downloadTask;
+    }
 
     public Integer getProgress() {
         return progress;
@@ -177,8 +167,6 @@ public class TaskInfo implements Serializable,Comparable<TaskInfo> {
     public void setJumpTimeStamp(long jumpTimeStamp) {
         this.jumpTimeStamp = jumpTimeStamp;
     }
-
-
 
     @Override
     public int hashCode() {

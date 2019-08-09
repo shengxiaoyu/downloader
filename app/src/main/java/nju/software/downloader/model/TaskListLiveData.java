@@ -6,6 +6,9 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class TaskListLiveData extends MutableLiveData<List<TaskInfo>> {
+    public TaskListLiveData(){
+        postValue(new CopyOnWriteArrayList<TaskInfo>());
+    }
     public void updateValue(TaskInfo taskInfo){
         List<TaskInfo> oldTasks = getValue();
         for(TaskInfo theTask:oldTasks){
