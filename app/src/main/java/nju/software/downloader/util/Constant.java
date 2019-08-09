@@ -12,6 +12,7 @@ public class Constant {
 
     //申请外存读写权限代码
     public static final int PERMISSIONS_REQUEST_EXTERNAL_STORAGE = 1 ;
+    public static final int BLOCKQUEUE_INIT_VALUE = 11;
 
     //同时最大下载数
     public static volatile int MAX_TASKS = 2 ;
@@ -33,5 +34,7 @@ public class Constant {
 
     public static final String EMPTY = "No Task Info" ;
 
-    public static final int BLOCKQUEUE_INIT_VALUE = 11 ;
+    //刷新进度最低延迟
+    public static final int REFRESH_PROGRESS_INTERVAL = 500 ;
+    
 }

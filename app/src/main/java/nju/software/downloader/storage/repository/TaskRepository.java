@@ -22,6 +22,7 @@ import nju.software.downloader.storage.dao.TaskDao;
 import nju.software.downloader.storage.repository.asyncTasks.DeleteSingleTask;
 import nju.software.downloader.storage.repository.asyncTasks.DownloadTask;
 import nju.software.downloader.storage.repository.asyncTasks.GetAllTask;
+import nju.software.downloader.storage.repository.asyncTasks.UpdateDBTask;
 import nju.software.downloader.storage.room.TaskRoomDatabase;
 import nju.software.downloader.util.Constant;
 import nju.software.downloader.util.CustomerThreadPoolExecutor;
@@ -339,6 +340,7 @@ public class TaskRepository {
         //更新缓存数据，以更新前端
         unfinishedTaskListLiveData.move(oldPosition,targetPosition) ;
 
+        new UpdateDBTask(taskDao).execute(movingTask);
 
     }
 

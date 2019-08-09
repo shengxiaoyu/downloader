@@ -53,101 +53,117 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
     @Override
     public void run() {
         File saveFile = new File(saveDir,taskInfo.getFileName()) ;
-        if(saveFile.exists()){
-            try {
-                resume(saveFile);
-            }catch (IllegalStateException e){
-                //不支持断点重传，
-                downloadDirectly(saveFile);
-            }
-        }else {
-            downloadDirectly(saveFile);
-        }
-    }
-
-    private void resume(File saveFile) throws IllegalStateException {
         HttpURLConnection connection = null;
         InputStream input = null;
+
         RandomAccessFile rwd = null ;
+        OutputStream output = null;
         try {
             URL url = new URL(taskInfo.getUrl());
             connection = (HttpURLConnection) url.openConnection();
             connection.connect();
 
-            // expect HTTP 200 OK, so we don't mistakenly save error report
-            if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-                Log.d(LOG_TAG, "Server returned HTTP " + connection.getResponseCode()
-                        + " " + connection.getResponseMessage());
-            }
-            Log.d(LOG_TAG, "网络连接成功");
-
-            // this will be useful to  display download percentage
-            // might be -1: server did not report the length
-            int fileLength = connection.getContentLength();
             long beginPosition = saveFile.length();
-            connection.setRequestProperty("Range", "bytes=" + beginPosition + "-");
+            //是否断点续传
+            boolean isResume=false ;
 
-            try {
-                input = connection.getInputStream();
-                //断点续传
-            } catch (IllegalStateException e) {
-                //有可能不支持断点续传
-                throw e;
+
+            if(beginPosition>0){
+                try {
+                    connection.setRequestProperty("Range", "bytes=" + beginPosition + "-");
+                    connection.connect();
+                    Log.d(LOG_TAG, "网络连接成功");
+                    connection.setRequestProperty("Range", "bytes=" + beginPosition + "-");
+                    input = connection.getInputStream();
+                    //断点续传
+                    isResume = true ;
+                    rwd = new RandomAccessFile(saveFile, "rwd");
+                } catch (IllegalStateException e) {
+                    //有可能不支持断点续传
+                    connection = (HttpURLConnection) url.openConnection();
+                    connection.connect();
+                    input = connection.getInputStream() ;
+                    isResume = false ;
+                    output = new FileOutputStream(saveFile) ;
+                }
+            }else {
+                input = connection.getInputStream() ;
+                isResume = false ;
+                output = new FileOutputStream(saveFile) ;
             }
+            int fileLength  = connection.getContentLength();
 
-            rwd = new RandomAccessFile(saveFile, "rwd");
+
             byte data[] = new byte[4096];
-            //一次之内的下载量
+            //一次更新进度之内的下载量
             long num = 0;
+
             //总体下载量
             long total = beginPosition;
+
             //单个循环下载量
             int count;
-            long beginTime = System.currentTimeMillis() ;
-            long endTime = beginTime ;
-            while ((count = input.read(data)) != -1) {
-                // allow canceling
-                if (Thread.currentThread().isInterrupted()) {
-                    this.status = 2 ;
-                    taskInfo.setSpeed(Constant.SPEED_OF_PAUSE);
-                    taskDao.update(taskInfo);
-                    return;
-                }
-                num += count;
-                rwd.write(data, 0, count);
 
-                // 更新进度条,暂不更新数据库，等退出或者结束的时候一起更新,这样虽然可能导致进度条和真是下载长度不一致，但问题不大
-                if (fileLength > 0 && num>fileLength/ Constant.TIMES_UPDATE_PROGRESS) { // only if total length is known
-                    endTime = System.currentTimeMillis() ;
-                    long speed = 0 ;
-                    if(endTime!=beginTime){
-                        speed = num/(1+(endTime-beginTime)/1000) ;
+            long beginTime = System.currentTimeMillis() ;
+            long endTime ;
+
+            //进度更新量
+            int changeProgress;
+            while ((count = input.read(data)) != -1) {
+                if (Thread.currentThread().isInterrupted()) {
+                    taskDao.update(taskInfo);
+                    return ;
+                }
+                // allow canceling
+                num += count;
+                total += count ;
+                if(isResume) {
+                    rwd.write(data, 0, count);
+                }else {
+                    output.write(data, 0, count);
+                }
+                //跟新进度条，时间间隔
+                if (((endTime=System.currentTimeMillis())-beginTime)> Constant.REFRESH_PROGRESS_INTERVAL) { // only if total length is known
+                    //如果进度小于1，不更新
+                    changeProgress = (int)num*100/fileLength ;
+                    if(changeProgress<1){
+                        continue;
                     }
-                    if(speed>Constant.GB){
-                        taskInfo.setSpeed(speed/Constant.GB+"GB/s");
-                    }else if(speed>Constant.MB){
-                        taskInfo.setSpeed(speed/Constant.MB+"MB/s");
-                    }else if(speed>Constant.KB){
-                        taskInfo.setSpeed(speed/Constant.KB+"KB/s");
+
+                    long _Speed = num/(endTime-beginTime)*1000 ;
+                    if(_Speed>Constant.GB){
+                        taskInfo.setSpeed(_Speed/Constant.GB+"GB/s");
+                    }else if(_Speed>Constant.MB){
+                        taskInfo.setSpeed(_Speed/Constant.MB+"MB/s");
+                    }else if(_Speed>Constant.KB){
+                        taskInfo.setSpeed(_Speed/Constant.KB+"KB/s");
                     }else {
-                        if(speed==0){
+                        if(_Speed==0){
                             taskInfo.setSpeed("- B/s");
                         }else {
-                            taskInfo.setSpeed(speed + "B/s");
+                            taskInfo.setSpeed(_Speed + "B/s");
                         }
                     }
+
                     taskInfo.setProgress((int) (total * 100 / fileLength));
                     num = 0;
-                    unfinishedTaskListLiveData.updateValue(taskInfo);
 
+
+                    //更新前再检查一遍
+                    if (Thread.currentThread().isInterrupted()) {
+                        taskDao.update(taskInfo);
+                        return ;
+                    }
+                    unfinishedTaskListLiveData.updateValue(taskInfo) ;
                     beginTime = System.currentTimeMillis() ;
                 }
             }
             //下载完成进度条一定位100，也为了避免不知道下载总长度的情况
-            taskInfo.setProgress(100);
+            taskInfo.setProgress((int) (total * 100 / fileLength));
             taskInfo.setFinished(true);
-            unfinishedTaskListLiveData.updateValue(taskInfo);
-
+            taskInfo.setSpeed(Constant.SPEED_OF_FINISHED);
+            unfinishedTaskListLiveData.delete(taskInfo);
+            finishedTaskListLiveData.addValue(taskInfo);
             //更新数据库
             taskDao.update(taskInfo);
         } catch (FileNotFoundException e) {
@@ -168,100 +184,6 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
                 connection.disconnect();
         }
 
-    }
-
-    private void downloadDirectly(File saveFile){
-
-        HttpURLConnection connection = null;
-        InputStream input = null;
-        OutputStream output = null;
-        try {
-            URL url = new URL(taskInfo.getUrl());
-            connection = (HttpURLConnection) url.openConnection();
-            connection.connect();
-
-            // expect HTTP 200 OK, so we don't mistakenly save error report
-            if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-                Log.d(LOG_TAG, "Server returned HTTP " + connection.getResponseCode()
-                        + " " + connection.getResponseMessage());
-            }
-            Log.d(LOG_TAG,"网络连接成功") ;
-
-            // this will be useful to display download percentage
-            // might be -1: server did not report the length
-            int fileLength = connection.getContentLength();
-            input = connection.getInputStream();
-            //为了避免RandomAccessFile性能影响，如果之前没有下载过使用简单的顺序写入
-            output = new FileOutputStream(saveFile) ;
-            Log.d(LOG_TAG,"下载保存地址："+saveFile.getAbsolutePath()) ;
-
-            byte[] data = new byte[4096];
-            long num = 0 ;
-            //总体下载量
-            long total = 0;
-            int count;
-            long beginTime = System.currentTimeMillis() ;
-            long endTime = beginTime ;
-            while ((count = input.read(data)) != -1) {
-                // allow canceling
-                if (Thread.currentThread().isInterrupted()) {
-                    taskDao.update(taskInfo);
-                    return ;
-                }
-                num += count ;
-                //在这里更新总量，避免最后一次不进入下面的if
-                total += count ;
-                output.write(data, 0, count);
-                // 更新进度条,暂不更新数据库，等退出或者结束的时候一起更新,这样虽然可能导致进度条和真是下载长度不一致，但问题不大
-                if (fileLength > 0 && num>fileLength/ Constant.TIMES_UPDATE_PROGRESS) { // only if total length is known
-                    endTime = System.currentTimeMillis() ;
-                    long speed = 0 ;
-                    if(endTime!=beginTime){
-                        speed = num/(1+(endTime-beginTime)/1000) ;
-                    }
-                    if(speed>Constant.GB){
-                        taskInfo.setSpeed(speed/Constant.GB+"GB/s");
-                    }else if(speed>Constant.MB){
-                        taskInfo.setSpeed(speed/Constant.MB+"MB/s");
-                    }else if(speed>Constant.KB){
-                        taskInfo.setSpeed(speed/Constant.KB+"KB/s");
-                    }else {
-                        if(speed==0){
-                            taskInfo.setSpeed("- B/s");
-                        }else {
-                            taskInfo.setSpeed(speed + "B/s");
-                        }
-                    }
-                    taskInfo.setProgress((int) (total * 100 / fileLength));
-                    num = 0;
-                    unfinishedTaskListLiveData.updateValue(taskInfo);
-
-                    beginTime = System.currentTimeMillis() ;
-                }
-            }
-            //下载完成进度条一定位100，也为了避免不知道下载总长度的情况
-            taskInfo.setProgress((int) (total * 100 / fileLength));
-            taskInfo.setFinished(true);
-            taskInfo.setSpeed(Constant.SPEED_OF_FINISHED);
-            unfinishedTaskListLiveData.delete(taskInfo);
-            finishedTaskListLiveData.addValue(taskInfo);
-            //更新数据库
-            taskDao.update(taskInfo);
-        } catch (MalformedURLException e1) {
-            e1.printStackTrace();
-        } catch (IOException e1) {
-            e1.printStackTrace();
-        }finally {
-            try {
-                if (output != null)
-                    output.close();
-                if (input != null)
-                    input.close();
-            } catch (IOException ignored) {
-            }
-            if (connection != null)
-                connection.disconnect();
-        }
     }
 
 
