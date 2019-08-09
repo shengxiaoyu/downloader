@@ -1,63 +1,43 @@
 package nju.software.downloader.model;
 
 import androidx.annotation.NonNull;
-import androidx.room.ColumnInfo;
-import androidx.room.Entity;
-import androidx.room.Ignore;
-import androidx.room.PrimaryKey;
 
 import java.io.Serializable;
 
-import nju.software.downloader.repository.repository.asyncTasks.DownloadTask;
+import nju.software.downloader.repository.asyncTasks.DownloadTask;
 import nju.software.downloader.util.Constant;
 
 
-@Entity(tableName = "TaskInfo_Table")
 public class TaskInfo implements Serializable,Comparable<TaskInfo> {
 
-    @NonNull
-    @ColumnInfo(name = "id")
-    //自增
-    @PrimaryKey(autoGenerate = true)
     private Long id ;
 
-    @NonNull
-    @ColumnInfo(name = "url")
     private String url ;
 
     //是否已完成
-    @ColumnInfo(name = "finished")
     private boolean finished ;
 
     //存储文件名
-    @ColumnInfo(name = "fileName")
     private String fileName ;
 
     //任务优先级
-    @ColumnInfo(name = "priority")
     private int priority ;
 
     //插队的时间戳
-    @ColumnInfo(name = "jumpTimeStamp")
     private long jumpTimeStamp;
 
     //下载进度
-    @Ignore
     private Integer progress ;
 
     //下载速度
-    @Ignore
     private String speed = Constant.SPEED_OF_WAITTING;
 
     //是否暂停状态
-    @Ignore
     private boolean paused ;
 
     //是否被选中
-    @Ignore
     private boolean selected ;
 
-    @Ignore
     private volatile DownloadTask downloadTask ;
 
     public DownloadTask getDownloadTask() {
@@ -71,7 +51,6 @@ public class TaskInfo implements Serializable,Comparable<TaskInfo> {
     public TaskInfo(String url){
         this.url = url ;
     }
-    @Ignore
     public TaskInfo(long id, String url, String fileName, boolean finished, int priority, long jumpTimeStamp){
         this.id = id ;
         this.url = url ;
@@ -82,7 +61,6 @@ public class TaskInfo implements Serializable,Comparable<TaskInfo> {
 
     }
     //room使用一个构造器去添加构造，因此要@Ignore一个
-    @Ignore
     public TaskInfo(Long id, @NonNull String url){
         this.id = id ;
         this.url = url ;

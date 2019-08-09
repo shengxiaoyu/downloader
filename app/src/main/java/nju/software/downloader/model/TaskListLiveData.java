@@ -18,10 +18,12 @@ public class TaskListLiveData extends MutableLiveData<List<TaskInfo>> {
     }
     public void addValue(TaskInfo taskInfo){
         CopyOnWriteArrayList<TaskInfo> oldTasks = (CopyOnWriteArrayList)getValue();
-
+        if(oldTasks==null){
+            oldTasks = new CopyOnWriteArrayList<TaskInfo>() ;
+        }
         //设置优先级为上一个队尾的优先级+1
         TaskInfo lastTask  ;
-        if(oldTasks!=null&&oldTasks.size()>0&& (lastTask=oldTasks.get(oldTasks.size()-1))!=null){
+        if(oldTasks.size()>0&& (lastTask=oldTasks.get(oldTasks.size()-1))!=null){
             int priority = lastTask.getPriority();
             taskInfo.setPriority(priority+1);
         }else {

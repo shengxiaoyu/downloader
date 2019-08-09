@@ -10,7 +10,7 @@ import androidx.lifecycle.LiveData;
 import java.util.List;
 
 import nju.software.downloader.model.TaskInfo;
-import nju.software.downloader.repository.repository.TaskRepository;
+import nju.software.downloader.repository.TaskRepository;
 
 //以一种不受配置更新影响的形式保存ui数据，不能传递context到viewmodel中
 public class TaskViewModel extends AndroidViewModel {

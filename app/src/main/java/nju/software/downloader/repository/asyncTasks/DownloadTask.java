@@ -1,4 +1,4 @@
-package nju.software.downloader.repository.repository.asyncTasks;
+package nju.software.downloader.repository.asyncTasks;
 
 import android.util.Log;
 
@@ -15,13 +15,13 @@ import java.net.URL;
 
 import nju.software.downloader.model.TaskInfo;
 import nju.software.downloader.model.TaskListLiveData;
-import nju.software.downloader.repository.database.TaskDao;
+import nju.software.downloader.repository.database.DBTaskManager;
 import nju.software.downloader.util.Constant;
 
 public class DownloadTask implements Runnable,Comparable<DownloadTask>{
     private TaskListLiveData unfinishedTaskListLiveData;
     private TaskListLiveData finishedTaskListLiveData ;
-    private TaskDao taskDao;
+    private DBTaskManager dbManager;
     private File saveDir ;
     private TaskInfo taskInfo ;
     private static final String LOG_TAG = DownloadTask.class.getSimpleName() ;
@@ -36,9 +36,9 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
     public static final int FINISHED = 3 ;
     public static final int DELETE = 4 ;
 
-    public DownloadTask(TaskDao taskDao, File saveDir, TaskListLiveData unfinishedTaskListLiveData, TaskInfo taskInfo,TaskListLiveData finishedTaskListLiveData) {
+    public DownloadTask(DBTaskManager dbManager, File saveDir, TaskListLiveData unfinishedTaskListLiveData, TaskInfo taskInfo, TaskListLiveData finishedTaskListLiveData) {
         this.unfinishedTaskListLiveData = unfinishedTaskListLiveData;
-        this.taskDao = taskDao;
+        this.dbManager = dbManager;
         this.saveDir = saveDir ;
         this.finishedTaskListLiveData = finishedTaskListLiveData ;
 
@@ -110,7 +110,6 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
             int changeProgress;
             while ((count = input.read(data)) != -1) {
                 if (Thread.currentThread().isInterrupted()) {
-                    taskDao.update(taskInfo);
                     return ;
                 }
                 // allow canceling
@@ -150,7 +149,6 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
 
                     //更新前再检查一遍
                     if (Thread.currentThread().isInterrupted()) {
-                        taskDao.update(taskInfo);
                         return ;
                     }
                     unfinishedTaskListLiveData.updateValue(taskInfo) ;
@@ -164,7 +162,7 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
             unfinishedTaskListLiveData.delete(taskInfo);
             finishedTaskListLiveData.addValue(taskInfo);
             //更新数据库
-            taskDao.update(taskInfo);
+            dbManager.update(taskInfo);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (MalformedURLException e) {
