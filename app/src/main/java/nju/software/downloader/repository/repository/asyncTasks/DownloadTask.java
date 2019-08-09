@@ -12,7 +12,6 @@ import java.io.RandomAccessFile;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.concurrent.Executors;
 
 import nju.software.downloader.model.TaskInfo;
 import nju.software.downloader.model.TaskListLiveData;
@@ -93,7 +92,6 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
                 output = new FileOutputStream(saveFile) ;
             }
             int fileLength  = connection.getContentLength();
-
 
             byte data[] = new byte[4096];
             //一次更新进度之内的下载量
@@ -228,8 +226,8 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
             runningThread.interrupt();
         }
         //释放引用
-        taskInfo.setDownloadTask(null);
-        runningThread = null ;
+//        taskInfo.setDownloadTask(null);
+//        runningThread = null ;
         status = DownloadTask.PAUSE;
     }
 
@@ -244,7 +242,8 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
         }
         //释放引用
         runningThread = null ;
-        taskInfo.setDownloadTask(null);
+//        taskInfo.setDownloadTask(null);
+//        taskInfo = null ;
         status = DownloadTask.DELETE;
     }
     public void waittting(){
@@ -252,7 +251,7 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
             runningThread.interrupt();
         }
         //释放引用
-        runningThread = null ;
+//        runningThread = null ;
         status = DownloadTask.WAITTING;
         taskInfo.setSpeed(Constant.SPEED_OF_WAITTING);
         unfinishedTaskListLiveData.updateValue(this.taskInfo);
@@ -261,6 +260,4 @@ public class DownloadTask implements Runnable,Comparable<DownloadTask>{
         return status==WAITTING ;
     }
 
-    class FlagException extends RuntimeException{
-    }
 }

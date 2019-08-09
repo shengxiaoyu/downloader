@@ -292,8 +292,7 @@ public class TaskRepository {
                 //暂停态,不做处理
             }else if(downloadTask.getStatus()==DownloadTask.FINISHED){
                 //任务刚好完成，不做处理
-            }
-            if(downloadTask.getStatus()== DownloadTask.WAITTING){
+            }if(downloadTask.getStatus()== DownloadTask.WAITTING){
                  //等待态，需要考虑新位置后面是否有正在执行的
 
                 //重新入队
@@ -369,13 +368,6 @@ public class TaskRepository {
         }
         //更新缓存数据，以更新前端
         unfinishedTaskListLiveData.move(oldPosition,targetPosition) ;
-
         new UpdateDBTask(taskDao).execute(movingTask);
-
     }
-
-
-
-
-
 }
