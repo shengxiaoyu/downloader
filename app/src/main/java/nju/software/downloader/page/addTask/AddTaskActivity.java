@@ -11,6 +11,9 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import java.net.MalformedURLException;
+import java.net.URL;
+
 import nju.software.downloader.R;
 
 public class AddTaskActivity extends AppCompatActivity {
@@ -37,12 +40,20 @@ public class AddTaskActivity extends AppCompatActivity {
                             R.string.empty_not_saved,
                             Toast.LENGTH_LONG).show();
                 } else {
-                    String word = mEditWordView.getText().toString();
-                    replyIntent.putExtra(EXTRA_REPLY, word);
-                    setResult(RESULT_OK, replyIntent);
-                    Log.d(LOG_TAG,word) ;
-                    //这个activity结束，出栈
-                    finish();
+                    String url = mEditWordView.getText().toString();
+                    try {
+                        //检测url是否合法
+                        new URL(url) ;
+                        replyIntent.putExtra(EXTRA_REPLY, url);
+                        setResult(RESULT_OK, replyIntent);
+                        Log.d(LOG_TAG,url) ;
+                        //这个activity结束，出栈
+                        finish();
+                    } catch (MalformedURLException e) {
+                        Log.d(LOG_TAG,"url不合法："+url) ;
+                        Toast.makeText(getApplicationContext(),"输入URL不合法！",Toast.LENGTH_SHORT).show();
+                    }
+
                 }
 
             }

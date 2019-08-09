@@ -32,7 +32,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import java.util.List;
 
 import nju.software.downloader.R;
-import nju.software.downloader.model.TaskInfo;
+import nju.software.downloader.model.repository.entities.TaskInfo;
 import nju.software.downloader.page.addTask.AddTaskActivity;
 import nju.software.downloader.page.config.ConfigActivity;
 import nju.software.downloader.util.Constant;
@@ -107,18 +107,18 @@ public class MainActivity extends AppCompatActivity {
     private void initRunningTaskList(){
         //添加未完成任务列表
         RecyclerView recyclerView = findViewById(R.id.unfinished_rv);
-        final TaskListAdapter adapter = new TaskListAdapter(this,mTaskViewModel);
+        final TaskListAdapter adapter = new TaskListAdapter(this);
         recyclerView.setAdapter(adapter);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         //添加对fileList的观察，
-        mTaskViewModel.getUnfinishedTasks().observe(this, new Observer<List<TaskInfo>>() {
+        mTaskViewModel.getUnfinishedTasks().observe(this, new Observer<List<TaskVO>>() {
 
             //当被观察数据更新时，调用这个方法
             @Override
-            public void onChanged(@Nullable final List<TaskInfo> taskInfos) {
+            public void onChanged(@Nullable final List<TaskVO> tasks) {
                 // Update the cached copy of the taskInfos in the adapter.
-                adapter.setTasks(taskInfos);
+                adapter.setTasks(tasks);
             }
         });
         //左右滑动删除任务和长按移动任务（实现任务插队）
@@ -150,9 +150,9 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
                         int layoutPosition = viewHolder.getLayoutPosition();
-                        TaskInfo taskAtPosition = adapter.getTaskAtPosition(layoutPosition);
+                        TaskVO taskAtPosition = adapter.getTaskAtPosition(layoutPosition);
                         Toast.makeText(MainActivity.this, "Deleting " +
-                                taskAtPosition.getUrl(), Toast.LENGTH_LONG).show();
+                                taskAtPosition.getFileName(), Toast.LENGTH_LONG).show();
                         Log.d(LOG_TAG,"左右滑动删除!") ;
                         mTaskViewModel.delete(taskAtPosition,Constant.UNFINISHED_FLAG);
                     }
@@ -194,16 +194,16 @@ public class MainActivity extends AppCompatActivity {
     private void initCommpleteTaskList(){
         //添加未完成任务列表
         RecyclerView recyclerView = findViewById(R.id.finished_rv);
-        final TaskListAdapter adapter = new TaskListAdapter(this,mTaskViewModel);
+        final TaskListAdapter adapter = new TaskListAdapter(this);
         recyclerView.setAdapter(adapter);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         //添加对fileList的观察，
-        mTaskViewModel.getFinishedTasks().observe(this, new Observer<List<TaskInfo>>() {
+        mTaskViewModel.getFinishedTasks().observe(this, new Observer<List<TaskVO>>() {
 
             //当被观察数据更新时，调用这个方法
             @Override
-            public void onChanged(@Nullable final List<TaskInfo> taskInfos) {
+            public void onChanged(@Nullable final List<TaskVO> taskInfos) {
                 // Update the cached copy of the taskInfos in the adapter.
                 adapter.setTasks(taskInfos);
             }
@@ -227,9 +227,9 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
                         int layoutPosition = viewHolder.getLayoutPosition();
-                        TaskInfo taskAtPosition = adapter.getTaskAtPosition(layoutPosition);
+                        TaskVO taskAtPosition = adapter.getTaskAtPosition(layoutPosition);
                         Toast.makeText(MainActivity.this, "Deleting " +
-                                taskAtPosition.getUrl(), Toast.LENGTH_LONG).show();
+                                taskAtPosition.getFileName(), Toast.LENGTH_LONG).show();
                         Log.d(LOG_TAG,"左右滑动删除!") ;
                         mTaskViewModel.delete(taskAtPosition,Constant.FINISHED_FLAG);
                     }
@@ -280,8 +280,8 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (requestCode == NEW_DOWNLADER_TASK_ACTIVITY_REQUEST_CODE && resultCode == RESULT_OK) {
-            TaskInfo taskInfo = new TaskInfo(data.getStringExtra(AddTaskActivity.EXTRA_REPLY));
-            mTaskViewModel.insert(taskInfo);
+            String url = data.getStringExtra(AddTaskActivity.EXTRA_REPLY);
+            mTaskViewModel.addNewDownloadTask(url);
         } else if(requestCode == CONFIGUATION_INTENT_CODE && resultCode == RESULT_OK) {
             int max_connection_number = data.getIntExtra(ConfigActivity.EXTRA_REPLY,0);
             if(max_connection_number!=0&&max_connection_number!=Constant.MAX_TASKS){

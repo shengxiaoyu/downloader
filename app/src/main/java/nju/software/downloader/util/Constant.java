@@ -34,4 +34,6 @@ public class Constant {
     public static final String EMPTY = "No Task Info" ;
 
     public static final int BLOCKQUEUE_INIT_VALUE = 11 ;
+
+    public static final int REFRESH_PROGRESS_INTERVAL = 500 ;
 }

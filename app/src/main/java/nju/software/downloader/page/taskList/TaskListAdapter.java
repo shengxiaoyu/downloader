@@ -1,43 +1,33 @@
 package nju.software.downloader.page.taskList;
 
 import android.content.Context;
-import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
-import androidx.core.view.DragStartHelper;
-import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
-
-import com.google.android.material.chip.Chip;
 
 import java.util.List;
 
 import nju.software.downloader.R;
-import nju.software.downloader.model.TaskInfo;
 import nju.software.downloader.util.Constant;
 
 public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHolder> {
     private final LayoutInflater mInflater;
 
-    private List<TaskInfo> mTaskInfos; // Cached copy of words
-    private TaskViewModel taskViewModel ;
+    private List<TaskVO> mTaskInfos; // Cached copy of words
 
     private Context context ;
 
-    public TaskListAdapter(Context context,TaskViewModel myTaskViewModel) {
+    public TaskListAdapter(Context context) {
         this.context = context ;
         mInflater = LayoutInflater.from(context);
-        this.taskViewModel = myTaskViewModel ;
     }
 
     @NonNull
@@ -50,7 +40,7 @@ public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHo
     @Override
     public void onBindViewHolder(@NonNull TaskHolder holder, int position) {
         if (mTaskInfos != null) {
-            TaskInfo current = mTaskInfos.get(position);
+            TaskVO current = mTaskInfos.get(position);
             holder.bind(current);
         } else {
             // Covers the case of data not being ready yet.
@@ -60,13 +50,11 @@ public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHo
     }
 
 
-    void setTasks(List<TaskInfo> taskInfos){
+    void setTasks(List<TaskVO> taskInfos){
         mTaskInfos = taskInfos;
         notifyDataSetChanged();
     }
 
-    // getItemCount() is called many times, and when it is first called,
-    // mTaskInfos has not been updated (means initially, it's null, and we can't return null).
     @Override
     public int getItemCount() {
         if (mTaskInfos != null)
@@ -79,10 +67,9 @@ public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHo
      * @param position
      * @return
      */
-    public TaskInfo getTaskAtPosition(int position){
+    public TaskVO getTaskAtPosition(int position){
         return mTaskInfos.get(position) ;
     }
-
 
 
     //定义单个item如何展示
@@ -101,13 +88,13 @@ public class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.TaskHo
             selectView = itemView.findViewById(R.id.select_iv) ;
         }
         //单个item如何展示
-        void bind(final TaskInfo current){
+        void bind(final TaskVO current){
             if(current==null){
                 fileNameView.setText(Constant.EMPTY);
                 progressBar.setProgress(0);
             }
-            fileNameView.setText(current.getFileName()==null?current.getUrl():current.getFileName());
-            progressBar.setProgress(current.getProgress()==null?0:current.getProgress());
+            fileNameView.setText(current.getFileName());
+            progressBar.setProgress(current.getProgress());
 
             if(current.isPaused()){
                 final Drawable drawable;
